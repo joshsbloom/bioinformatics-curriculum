@@ -1,0 +1,90 @@
+\chapter{How This Curriculum Works (Read This First)}
+
+\begin{brainbox}[Built for how learning actually works]
+Traditional curricula front-load reading and back-load doing. This one flips that: every session is hands-on first, theory second.
+
+Every session produces something tangible. You never just ``read about'' a topic --- you DO it, see output, and move on.
+
+It's okay to jump around. Each sprint is self-contained enough that you can follow your curiosity without losing the thread.
+\end{brainbox}
+
+
+\section{The Three Rules}
+
+\textbf{\color{teal}Rule 1: The 25-Minute Sprint.} Every study session is broken into 25-minute sprints (Pomodoro). Each sprint has ONE clear goal and ONE tangible output. If you finish early, take the break early. If you're in flow, keep going --- but never force yourself past 50 minutes without a break.
+
+\textbf{\color{teal}Rule 2: Output Before Input.} Always DO something before you READ about it. Try the command first. Break something. Then read why it broke. You'll remember mistakes and fixes much better than anything you passively read.
+
+\textbf{\color{teal}Rule 3: The Checkpoint.} Every sprint ends with a concrete thing you made, produced, or proved works. Screenshot it, commit it, or write one sentence in your journal. This is your proof of progress.
+
+
+\section{How a Block Works}
+
+The curriculum is divided into 12 \textbf{blocks}. Each block is roughly 2 hours of focused work, organized as a small batch of 25-minute sprints with short breaks between them. Most blocks land around 3--5 sprints --- check the chapter for the exact count. How you spread a block across the calendar is up to you: one 2-hour sitting, two 60-minute sittings, or a sprint a day all work. What matters is that you finish the block's sprints before moving on.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\headertext{Within a sitting} & \headertext{What You Do} \\
+\midrule
+Sprint (25 min) & Hands-on: work through the sprint's goal and produce its checkpoint \\
+Break (5 min) & Stand up, walk, look away from the screen \\
+Next sprint & Continue --- or stop here and pick up another day \\
+End of block & Journal one sentence per sprint. Commit to Git. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\textit{Never force yourself past 50 minutes of sprinting without a real break. If you want to do more in a day, take 30+ minutes off before starting the next block.}
+
+
+\section{Your Toolkit (Set Up in Block 0)}
+
+Before Block 1, spend one sitting setting this up. This is Sprint 0.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\headertext{What} & \headertext{Why} & \headertext{How} \\
+\midrule
+Terminal & Everything runs here & Linux/macOS terminal; or WSL2 on Windows \\
+Miniforge & Package management without pain & github.com/conda-forge/miniforge \\
+VS Code & Editor with terminal built in & code.visualstudio.com (or your favorite editor) \\
+Git + GitHub & Version control \& your portfolio & git-scm.com; make a GitHub account now \\
+Claude or ChatGPT & AI tutor always available & claude.ai (free tier works) \\
+A journal.md file & One sentence per day = progress proof & Create it in your Git repo right now \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{winbox}[Sprint 0 Checkpoint]
+Install everything. Open your terminal. Create a Git repo called \texttt{bioinfo-journey} with a \texttt{journal.md} file. Push it to GitHub.
+\end{winbox}
+
+
+\section{Interleaving: Why This Curriculum Mixes Things Up}
+
+\begin{brainbox}[Why not just learn Unix, then Python, then R in order?]
+Research consistently shows that retention improves when topics are interleaved (mixed) rather than massed (all-Unix-then-all-Python).
+
+Each block below has a PRIMARY focus, but deliberately connects to other skills. By Block 4 you're already using Python + Unix + statistics together.
+
+If you get stuck on one topic, switch to a different sprint in the same block. Coming back later with fresh eyes is not quitting --- it's how interleaving works.
+\end{brainbox}
+
+
+\section{How to Use AI as Your Study Partner}
+
+AI tools are effective study aids --- treat them as a resource you can query at any time for explanations, debugging, and code review.
+
+\begin{itemize}[nosep]
+  \item \textbf{Stuck on an error?} Paste the FULL error message into Claude. Don't describe it --- paste it.
+  \item \textbf{Confused by a concept?} Ask: ``Explain [concept] like I already know [thing I do know] but not [thing I don't].''
+  \item \textbf{Want to check understanding?} Ask: ``I think [my understanding]. Is that right? What am I missing?''
+  \item \textbf{Need a break from reading?} Ask: ``Give me a 5-minute hands-on exercise to practice [concept].''
+  \item \textbf{Feeling overwhelmed?} Ask: ``What's the ONE most important thing I should understand about [topic]?''
+\end{itemize}
+
+\begin{warnbox}[The one rule about AI]
+Always run AI-generated code before trusting it. AI hallucinates function names, invents packages, and confuses API versions. Test first, trust after.
+\end{warnbox}

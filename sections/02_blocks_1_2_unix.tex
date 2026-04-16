@@ -1,0 +1,159 @@
+\chapter{Blocks 1--2: Unix Foundations}
+
+\textbf{Primary:} Command line, text processing, bash scripting\quad|\quad\textbf{Interleave:} Git, project setup
+
+\begin{brainbox}[Why this matters]
+Every bioinformatics pipeline runs on Unix. Genomic data is text. If you can wrangle text in a terminal, you can wrangle genomes.
+\end{brainbox}
+
+
+\section{Block 1: The Command Line}
+
+\sprint{1}{Navigate \& Look Around}{25}
+\begin{itemize}[nosep]
+  \item Open your terminal. Run: \texttt{pwd}, \texttt{ls}, \texttt{ls -la}, \texttt{cd \textasciitilde}, \texttt{cd /}, \texttt{cd -}, \texttt{tree} (install with conda if needed)
+  \item Make a project directory: \texttt{mkdir -p \textasciitilde/bioinfo/block1/\{data,scripts,results\}}
+  \item Explore: what's in \texttt{/usr/bin}? How many files? (\texttt{ls /usr/bin | wc -l})
+\end{itemize}
+\begin{winbox}[Checkpoint]
+Screenshot your project directory tree. Paste it in journal.md.
+\end{winbox}
+
+\sprint{2}{Pipes --- The Unix Superpower}{25}
+\begin{itemize}[nosep]
+  \item The pipe (\texttt{|}) sends output from one command into another. This is the entire Unix philosophy.
+  \item Try: \texttt{echo 'ATGCGATCGATCG' | grep -o . | sort | uniq -c | sort -rn} --- count nucleotide frequencies in one line
+  \item Download a small FASTA file:
+    \begin{lstlisting}
+curl -O https://downloads.yeastgenome.org/sequence/
+  S288C_reference/genome_releases/
+  S288C_reference_genome_Current_Release.tgz
+tar xzf S288C_reference_genome_Current_Release.tgz
+    \end{lstlisting}
+  \item Explore it: \texttt{grep '>' *.fsa | head} --- what are these header lines telling you?
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You piped three commands together and saw structured output.
+\end{winbox}
+
+\sprint{3}{grep + awk = Data Surgery}{25}
+\begin{itemize}[nosep]
+  \item \texttt{grep}: searches for patterns. \texttt{grep -c '>' file.fasta} counts sequences. \texttt{grep -v} inverts (excludes matches).
+  \item \texttt{awk}: extracts and transforms columns. \texttt{awk -F'\textbackslash t' '\{print \$1, \$2, \$5\}'} pulls chr, pos, and qual from a VCF.
+  \item Grab a small VCF to practice on. Yeast works well --- a whole-organism variant file that's only a few MB:
+    \begin{lstlisting}
+curl -O https://ftp.ensembl.org/pub/
+  current_variation/vcf/saccharomyces_cerevisiae/
+  saccharomyces_cerevisiae.vcf.gz
+gunzip saccharomyces_cerevisiae.vcf.gz
+    \end{lstlisting}
+    If that link has moved, browse \texttt{https://ftp.ensembl.org/pub/current\_variation/vcf/} and pick any small organism's VCF. Other good ``small VCF'' sources: the bcftools test data (\texttt{github.com/samtools/bcftools}, \texttt{test/} directory) or a single-chromosome 1000 Genomes file restricted to a small region with \texttt{tabix}.
+  \item Count variants per chromosome with:
+    \begin{lstlisting}
+grep -v '^#' file.vcf | awk '{print $1}' | \
+  sort | uniq -c | sort -rn
+    \end{lstlisting}
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You summarized a genome's worth of variants in one line.
+\end{winbox}
+
+\sprint{4}{Put It All Together on Your VCF}{25}
+Now use the tools from Sprints 1--3 (plus \texttt{sed}, \texttt{cut}, \texttt{sort}) to actually interrogate the VCF you just downloaded. Do each step yourself --- don't just copy. Paste every command (and its one-line output summary) into \texttt{journal.md} as you go.
+\begin{enumerate}[nosep]
+  \item \textbf{Confirm the download.} Use \texttt{head -n 20 file.vcf} to look at the header, and \texttt{head -n 40 file.vcf | tail -n 5} to peek at the first few variant lines. Do the columns look like a VCF (CHROM, POS, ID, REF, ALT, \ldots)?
+  \item \textbf{Organize your workspace.} You should already have \texttt{\textasciitilde/bioinfo/block1/\{data,scripts,results\}}. Move the VCF and the yeast FASTA into \texttt{data/} in one go, e.g.\ \texttt{ls *.vcf *.fsa 2>/dev/null | xargs -I\{\} mv \{\} \textasciitilde/bioinfo/block1/data/}. Verify with \texttt{ls \textasciitilde/bioinfo/block1/data/}.
+  \item \textbf{How many variants total?} Uncomment lines only: \texttt{grep -vc '\^{}\#' file.vcf}. Is the number in the right ballpark (tens of thousands for yeast)?
+  \item \textbf{Pick a GC-rich region.} In yeast, ribosomal-protein and subtelomeric regions skew GC-high. Pick a chromosome and a 50\,kb window, e.g.\ chr IV, 500{,}000--550{,}000:
+    \begin{lstlisting}
+grep -v '^#' file.vcf | \
+  awk -F'\t' '$1=="IV" && $2>=500000 && $2<=550000' | \
+  wc -l
+    \end{lstlisting}
+  \item \textbf{REF-base nucleotide frequencies in that window.} Extend the pipeline --- grab the REF column (\texttt{\$4}), split into characters, count them:
+    \begin{lstlisting}
+grep -v '^#' file.vcf | \
+  awk -F'\t' '$1=="IV" && $2>=500000 && $2<=550000 \
+    {print $4}' | \
+  grep -o . | sort | uniq -c | sort -rn
+    \end{lstlisting}
+    Do A/T and G/C look balanced, or skewed? Compare against a window you expect to be AT-rich.
+  \item \textbf{Save your work.} Every command + its output should now be in \texttt{journal.md}. Commit it.
+\end{enumerate}
+\begin{winbox}[Checkpoint]
+Your journal shows: the \texttt{head} confirmation, the move-into-\texttt{data/} pipeline, the total variant count, and the per-window REF-base frequencies --- all done with pipes, no scripts yet.
+\end{winbox}
+
+\begin{tipbox}[Pattern to remember]
+In Unix bioinformatics, the workflow is almost always: EXTRACT columns (cut/awk) $\to$ FILTER rows (grep) $\to$ SORT $\to$ COUNT (uniq -c). This pattern covers 80\% of quick data exploration.
+\end{tipbox}
+
+
+\section{Block 2: Scripts, Environments \& Git}
+
+\sprint{5}{Your First Bash Script}{25}
+\begin{itemize}[nosep]
+  \item Create a file: \texttt{nano \textasciitilde/bioinfo/scripts/count\_variants.sh}
+  \item Add: \texttt{\#!/usr/bin/env bash}, then \texttt{set -euo pipefail} (this catches errors immediately)
+  \item Write a script that takes a VCF filename as \texttt{\$1} and outputs a per-chromosome variant count table
+  \item Make it executable: \texttt{chmod +x count\_variants.sh}, then run it
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You have a reusable script. Run it on a different VCF. Same script, different data.
+\end{winbox}
+
+\sprint{6}{Conda --- Never Break Your System Again}{25}
+\begin{itemize}[nosep]
+  \item Create an environment: \texttt{conda create -n biotools samtools bcftools bedtools fastp}
+  \item Activate it: \texttt{conda activate biotools}. Verify: \texttt{samtools --version}
+  \item Export it: \texttt{conda env export > environment.yml} --- now anyone can reproduce your setup
+  \item Deactivate: \texttt{conda deactivate}. Run \texttt{samtools} again --- it's no longer available. Environments isolate dependencies.
+\end{itemize}
+\begin{winbox}[Checkpoint]
+Your environment.yml file is a reproducible recipe. Commit it to Git.
+\end{winbox}
+
+\sprint{7}{Git --- Your Time Machine}{25}
+\begin{itemize}[nosep]
+  \item Initialize your repo:
+    \begin{lstlisting}
+cd ~/bioinfo && git init && git add -A && \
+  git commit -m 'Blocks 1-2: Unix foundations'
+    \end{lstlisting}
+  \item Make a change. Run \texttt{git diff}. Stage and commit. Run \texttt{git log --oneline}.
+  \item Create a \texttt{.gitignore} that excludes \texttt{*.bam}, \texttt{*.fastq.gz}, \texttt{*.vcf.gz} (never commit large data)
+  \item Push to GitHub: create a repo, add remote, push. Your work is now backed up and public.
+\end{itemize}
+\begin{winbox}[Checkpoint]
+Your bioinfo-journey repo has real commits with real work. This becomes your portfolio.
+\end{winbox}
+
+\sprint{8}{Integration Sprint: Full Pipeline}{50}
+\begin{itemize}[nosep]
+  \item Combine everything: write a bash script that creates a conda env, downloads a FASTQ from SRA (use \texttt{fastq-dump} or \texttt{fasterq-dump}), runs \texttt{fastp} for QC, and logs results to a file
+  \item Use \texttt{tmux} or \texttt{screen} so you can disconnect and reconnect (crucial for HPC)
+  \item Commit the script and the QC results (not the raw data) to Git
+\end{itemize}
+\begin{winbox}[Checkpoint]
+A complete, reproducible, version-controlled QC pipeline. From nothing to this in two blocks.
+\end{winbox}
+
+\begin{restbox}[End of Blocks 1--2]
+Take a day to step away before starting Python. The command-line fundamentals are now in place.
+\end{restbox}
+
+\subsection{Can I move on? Checkpoint:}
+\begin{itemize}[nosep]
+  \item You can navigate any directory, find files, and chain 3+ commands with pipes
+  \item You can write a bash script that processes a genomic file and logs output
+  \item You have a conda environment with bioinformatics tools installed
+  \item Your work is in a Git repo on GitHub
+\end{itemize}
+\textit{If not, spend 2--3 more days on the gaps. No rush.}
+
+\subsection{Resources}
+\begin{itemize}[nosep]
+  \item Software Carpentry: The Unix Shell (free, interactive)
+  \item Buffalo -- \textit{Bioinformatics Data Skills}, Ch.\ 3, 7, 12
+  \item explainshell.com --- paste any command and see what each part does
+\end{itemize}

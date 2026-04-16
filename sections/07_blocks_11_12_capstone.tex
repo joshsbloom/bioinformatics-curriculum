@@ -1,0 +1,123 @@
+\chapter{Blocks 11--12: AI, Right Questions \& Capstone}
+
+\textbf{Primary:} AI prompting, data expectations, reproducible pipelines, capstone project
+
+\begin{brainbox}[The meta-skill]
+Tools change. Methods change. The ability to ask the right question, recognize unexpected data, and evaluate AI output --- that lasts your whole career.
+\end{brainbox}
+
+
+\section{Block 11: Asking the Right Questions + AI Mastery}
+
+\sprint{1}{The Question Framework}{25}
+\begin{itemize}[nosep]
+  \item Before EVERY analysis, write down answers to: What's the biological question? What would a yes look like? What would a no look like?
+  \item Data inventory: how many rows? columns? What does each represent? What are the expected ranges?
+  \item Sanity checks: $\sim$4--5M variants per human genome, $\sim$20K protein-coding genes, scRNA-seq: 500--5000 genes/cell
+  \item Red flags to watch for: flat Manhattan plot (no signal), bimodal quality scores, batch-correlated PCA
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You wrote a pre-analysis checklist for a dataset. This prevents weeks of wasted analysis on broken data.
+\end{winbox}
+
+\subsection{The Question Map}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\headertext{Stage} & \headertext{Ask This} \\
+\midrule
+Before you start & What is the question? What would a definitive answer look like? \\
+Loading data & What do rows/columns represent? Expected dimensions? Missing values? \\
+Choosing methods & What does this method assume? Does my data meet the assumptions? \\
+After QC & Do distributions look right? Do controls work? Any batch effects? \\
+Interpreting results & Is the effect size meaningful? Could confounders explain this? \\
+Before publishing & Can someone else reproduce this? Are all parameters recorded? \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\sprint{2}{Prompting AI Like a Bioinformatician}{25}
+\begin{itemize}[nosep]
+  \item Context-first prompting: ``I have a 10x scRNA-seq h5ad file, 50K cells, human PBMCs. I want to...''
+  \item Constraint prompting: ``Use scanpy 1.9+, avoid deprecated functions, include comments at each QC threshold''
+  \item Verification prompting: ``Include assertions that check the output dimensions and warn if something unexpected happens''
+  \item Debugging: paste the FULL error message + stack trace. Never describe the error in your own words.
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You wrote a prompt that generated working, well-documented bioinformatics code on the first try.
+\end{winbox}
+
+\sprint{3}{Spotting AI Hallucinations}{25}
+\begin{itemize}[nosep]
+  \item Common AI mistakes: inventing function names, confusing package versions, incorrect parameter names
+  \item Always test: run AI code on a small known-answer dataset before trusting it on real data
+  \item Cross-validate: ask two different AI tools the same question. If they disagree, investigate.
+  \item Version trap: AI may mix up scanpy 1.8 vs 1.10 syntax, or old Seurat v3 vs v5 functions
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You found and corrected an AI hallucination. This is a critical skill for AI-augmented research.
+\end{winbox}
+
+\begin{warnbox}[AI ground rules for research]
+\begin{itemize}[nosep]
+  \item Always run AI-generated code before trusting it.
+  \item Cite AI assistance in your methods section --- transparency matters.
+  \item Never use AI for novel method development without deep verification.
+  \item AI is a study partner, not a replacement for understanding.
+\end{itemize}
+\end{warnbox}
+
+
+\section{Block 12: Reproducible Pipeline + Capstone}
+
+\sprint{4}{Snakemake: Your Pipeline in Code}{50}
+\begin{itemize}[nosep]
+  \item Snakemake defines a pipeline as a set of rules. Each rule: input files $\to$ output files + a shell/Python command.
+  \item Start simple: rule download + rule qc + rule align. Run with \texttt{snakemake --cores 4}.
+  \item Snakemake automatically figures out the execution order. Change an input file? It re-runs only what's needed.
+  \item Add a \texttt{conda:} directive to each rule for per-step environments. Now it's fully reproducible.
+  \item Alternative: Nextflow + nf-core if you prefer. nf-co.re has community-curated pipelines for most assays.
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You have a multi-step Snakemake pipeline that someone else could clone and run.
+\end{winbox}
+
+\subsection{Capstone Project}
+
+This is your final project. It ties together everything from the past 11 blocks into a single, complete analysis.
+
+\begin{dobox}[What to build]
+\begin{itemize}[nosep]
+  \item Choose a biological question and a public dataset (GEO, SRA, GWAS Catalog).
+  \item Build a reproducible pipeline (Snakemake or Nextflow) in a Git repository.
+  \item Analyze with Python and/or R, using appropriate statistical methods.
+  \item Produce at least 3 publication-quality figures with captions.
+  \item Write a 5--10 page report: question, methods, results, interpretation.
+  \item Include an AI journal: how you used AI tools, what worked, what didn't.
+\end{itemize}
+\end{dobox}
+
+\begin{tipbox}[Suggested capstone topics]
+\begin{itemize}[nosep]
+  \item Complete Problem Set 4 (QTL Mapping) from the Running Project --- this is the recommended capstone if you've been working through Problem Sets 1--3
+  \item Reproduce a published scRNA-seq analysis with updated methods (new normalization, better clustering)
+  \item GWAS-to-function: fine-map a locus, colocalize with eQTLs, identify candidate genes
+  \item Cross-ancestry PRS: build polygenic risk scores, test portability across populations
+  \item CRISPR screen reanalysis: apply MAGeCK + BAGEL2 to a published dataset, compare hit lists
+\end{itemize}
+\end{tipbox}
+
+\sprint{5}{The Reproducibility Test}{25}
+\begin{itemize}[nosep]
+  \item Clone your repo to a different computer (or ask a friend/AI to try).
+  \item Can they install the environment and run the pipeline end-to-end?
+  \item If yes: you're done. If no: fix what's broken. This is the real test.
+\end{itemize}
+\begin{winbox}[Checkpoint]
+Someone else can reproduce your analysis from your repo. That is the standard to aim for.
+\end{winbox}
+
+\begin{restbox}[End of the curriculum]
+At this point you can process genomic data in Unix, analyze it in Python and R, apply rigorous statistics, and produce reproducible research. The foundation is in place --- continued learning comes from applying these skills to real research questions.
+\end{restbox}

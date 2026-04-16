@@ -1,0 +1,117 @@
+\chapter{Blocks 3--4: Python for Genomic Data}
+
+\textbf{Primary:} Data structures, Pandas, visualization\quad|\quad\textbf{Interleave:} Unix pipes, real genomic files
+
+\begin{brainbox}[Connection to what you already know]
+You just learned to process text files with grep and awk. Python does the same things but with more power, reusable code, and the ability to make plots and run statistics.
+\end{brainbox}
+
+
+\section{Block 3: Core Python via Biology}
+
+\sprint{1}{Data Structures Are Biology}{25}
+\begin{itemize}[nosep]
+  \item Strings = DNA sequences. Try:
+    \begin{lstlisting}
+seq = 'ATGCGATCG'
+comp = seq.translate(str.maketrans('ATCG','TAGC'))
+print(comp[::-1])  # reverse complement
+    \end{lstlisting}
+  \item Dictionaries = lookup tables. Build a codon table: \texttt{codons = \{'ATG': 'M', 'TAA': '*', 'GCT': 'A', ...\}} and translate a sequence three codons at a time
+  \item Sets = overlaps. \texttt{set(sampleA) \& set(sampleB)} gives you shared samples in one line
+  \item Lists + comprehensions = fast filtering: \texttt{[g for g in genes if g.startswith('BRCA')]}
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You translated a DNA sequence using a Python dictionary. Data structures map directly to biological concepts.
+\end{winbox}
+
+\sprint{2}{Parsing Genomic Files}{25}
+\begin{itemize}[nosep]
+  \item Write a FASTA parser: open the file, loop through lines, yield (header, sequence) pairs
+  \item Use a context manager (\texttt{with open(...) as f:}) --- always. This prevents resource leaks.
+  \item Parse a BED file into a list of dictionaries: \texttt{[\{chr: ..., start: ..., end: ...\}, ...]}
+  \item Handle errors: what happens when a line is malformed? Add \texttt{try/except}.
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You can parse any text-based genomic file. This is a skill you'll use indefinitely.
+\end{winbox}
+
+\sprint{3}{Generators --- Process Files Bigger Than Your RAM}{25}
+\begin{itemize}[nosep]
+  \item A generator uses \texttt{yield} instead of \texttt{return} --- it produces items one at a time without loading everything into memory
+  \item Convert your FASTA parser to a generator. Notice: it handles a 10GB file the same way as a 10KB file.
+  \item This is critical for bioinformatics: VCFs can be billions of lines. You cannot load them into memory.
+\end{itemize}
+\begin{winbox}[Checkpoint]
+Your FASTA parser works on any size file. That's production-quality code.
+\end{winbox}
+
+\begin{tipbox}[The Python $\leftrightarrow$ Unix bridge]
+You already know \texttt{awk '\{print \$1\}'} extracts column 1. The Python equivalent: \texttt{line.split('\textbackslash t')[0]}. Your Unix skills transfer directly. When in doubt, prototype in awk, then scale up in Python.
+\end{tipbox}
+
+
+\section{Block 4: Pandas, Plotting \& Bio Libraries}
+
+\sprint{4}{Pandas for Tabular Genomic Data}{25}
+\begin{itemize}[nosep]
+  \item Load GWAS summary stats: \texttt{df = pd.read\_csv('sumstats.tsv', sep='\textbackslash t', dtype=\{'CHR': str\})}
+  \item Filter: \texttt{sig = df[df['P'] < 5e-8]} --- genome-wide significant hits
+  \item GroupBy: \texttt{df.groupby('CHR')['P'].min()} --- best p-value per chromosome
+  \item Merge: \texttt{pd.merge(genotypes, phenotypes, on='SAMPLE\_ID')} --- the most common GWAS operation
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You loaded, filtered, and grouped real GWAS data. This replaces hours of spreadsheet work.
+\end{winbox}
+
+\sprint{5}{Visualization}{25}
+\begin{itemize}[nosep]
+  \item Manhattan plot: scatter plot of $-\log_{10}(P)$ vs.\ genomic position, colored by chromosome
+  \item QQ plot: expected vs.\ observed $-\log_{10}(P)$ --- the standard GWAS diagnostic
+  \item Use matplotlib for control, seaborn for aesthetics. Always label axes, always include titles.
+  \item Save to file: \texttt{plt.savefig('manhattan.png', dpi=150, bbox\_inches='tight')}
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You made a Manhattan plot from real data. Screenshot it for your portfolio.
+\end{winbox}
+
+\sprint{6}{NumPy + SciPy = Fast Math}{25}
+\begin{itemize}[nosep]
+  \item NumPy arrays: 100$\times$ faster than Python lists for math. \texttt{np.mean(quality\_scores)} instead of \texttt{sum()/len()}
+  \item Vectorized operations: never loop over millions of variants. \texttt{genotypes * 2} multiplies every element at once.
+  \item SciPy stats: \texttt{scipy.stats.ttest\_ind(group1, group2)} for quick hypothesis tests
+  \item Multiple testing: \texttt{from statsmodels.stats.multitest import multipletests} --- you'll need this for any -omics analysis
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You ran a statistical test on biological data in Python. No GUI, no spreadsheets --- just code.
+\end{winbox}
+
+\sprint{7}{Bio Libraries: pysam, Biopython, scanpy}{25}
+\begin{itemize}[nosep]
+  \item pysam: read BAM files programmatically. Count reads mapping to a gene in 3 lines.
+  \item Biopython: \texttt{SeqIO.parse()} handles FASTA, FASTQ, GenBank. \texttt{Entrez.efetch()} queries NCBI.
+  \item scanpy: the single-cell analysis framework. We'll use it heavily in Blocks 9--10.
+  \item scikit-allel: population genetics in Python --- allele frequencies, LD, PCA from VCF data
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You queried NCBI from Python and read a BAM file programmatically. You're automating research.
+\end{winbox}
+
+\begin{restbox}[End of Blocks 3--4]
+You just absorbed a new language AND applied it to biology. Take some time off. Let it consolidate.
+\end{restbox}
+
+\subsection{Checkpoint:}
+\begin{itemize}[nosep]
+  \item You can parse any common genomic file in Python (FASTA, BED, VCF, TSV)
+  \item You can use Pandas to load, filter, group, and merge tabular data
+  \item You can make a Manhattan plot and a QQ plot
+  \item You understand why vectorized NumPy operations are faster than Python loops
+\end{itemize}
+
+\subsection{Resources}
+\begin{itemize}[nosep]
+  \item McKinney -- \textit{Python for Data Analysis} (the Pandas bible)
+  \item VanderPlas -- \textit{Python Data Science Handbook} (free online)
+  \item Real Python (realpython.com) --- searchable tutorials for anything
+\end{itemize}

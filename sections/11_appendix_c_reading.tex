@@ -1,0 +1,64 @@
+\chapter{Appendix C: Reading List (Prioritized)}
+
+\section{Start Here (the essentials)}
+\begin{itemize}[nosep]
+  \item StatQuest YouTube (Josh Starmer) --- watch the PCA, DESeq2, and p-value episodes first
+  \item Software Carpentry: Unix Shell workshop (free, interactive, excellent)
+  \item Scanpy PBMC3k tutorial (the canonical single-cell starting point)
+  \item Marees et al.\ -- A tutorial on conducting GWAS (step-by-step)
+  \item R for Data Science (r4ds.hadley.nz) --- free, skip to Ch.\ 3 if you know basics
+\end{itemize}
+
+\section{Go Deeper (when you're ready)}
+\begin{itemize}[nosep]
+  \item Buffalo -- \textit{Bioinformatics Data Skills} (the Unix + workflows bible)
+  \item McKinney -- \textit{Python for Data Analysis}, 3rd Ed (the Pandas bible)
+  \item Holmes \& Huber -- \textit{Modern Statistics for Modern Biology} (free online)
+  \item Love, Huber, Anders -- DESeq2 paper (Genome Biology, 2014)
+  \item Heumos et al.\ -- Best practices for single-cell analysis (Nat Rev Genet, 2023)
+  \item Uffelmann et al.\ -- Genome-wide association studies (Nat Rev Methods Primers, 2021)
+  \item Bulik-Sullivan et al.\ -- LD Score regression (Nature Genetics, 2015)
+\end{itemize}
+
+\section{Reference (keep on your shelf)}
+\begin{itemize}[nosep]
+  \item Gillespie -- \textit{Population Genetics: A Concise Guide}
+  \item Efron -- \textit{Large-Scale Inference}
+  \item Storey \& Tibshirani -- FDR paper (PNAS, 2003)
+  \item Wang et al.\ -- SuSiE (JRSS-B, 2020)
+  \item Wilson et al.\ -- Good enough practices in scientific computing (PLOS Comp Bio, 2017)
+\end{itemize}
+
+\section{Online Tools \& Databases}
+\begin{itemize}[nosep]
+  \item explainshell.com --- paste any Unix command to see what each flag does
+  \item Bioconductor workflows --- bioconductor.org/packages/release/workflows/
+  \item GWAS Catalog --- ebi.ac.uk/gwas/
+  \item PGS Catalog --- pgscatalog.org
+  \item nf-core --- nf-co.re (community Nextflow pipelines)
+  \item Anthropic Prompt Engineering Guide --- docs.anthropic.com
+\end{itemize}
+
+\section{12-Block Overview}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{c l l X}
+\toprule
+\headertext{Block} & \headertext{Unit} & \headertext{Primary Focus} & \headertext{Key Output} \\
+\midrule
+0 & Setup & Install everything & Git repo with journal.md \\
+1 & Unix & Filesystem, pipes, text tools & One-liner pipeline for VCF analysis \\
+2 & Unix & Bash scripting, conda, Git & Automated QC script on GitHub \\
+3 & Python & Data structures, file parsing & FASTA parser with tests \\
+4 & Python & Pandas, plotting, bio libs & Manhattan + QQ plots from GWAS data \\
+5 & R & tidyverse, Bioconductor & GRanges overlaps + data loaded from GEO \\
+6 & R & DESeq2, ggplot2 & DE analysis + Problem Set 1 (Growth Curves) \\
+7 & Stats & Distributions, testing, models & Simulated GWAS with FDR analysis \\
+8 & Stats & PCA, UMAP, Bayes concepts & Problem Set 2 (Heritability \& Mixed Models) \\
+9 & Apps & scRNA-seq full pipeline & Annotated cell clusters from real data \\
+10 & Apps & GWAS pipeline, post-GWAS & Problem Set 3 (Short-Read Alignment \& Strain ID) \\
+11 & Meta & AI prompting, right questions & AI research journal \\
+12 & Capstone & Pipeline + project & Problem Set 4 (QTL Mapping) or custom capstone \\
+\bottomrule
+\end{tabularx}
+\end{center}

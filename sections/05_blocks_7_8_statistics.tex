@@ -1,0 +1,123 @@
+\chapter{Blocks 7--8: Statistics for Genomics}
+
+\textbf{Primary:} Distributions, multiple testing, linear models, PCA\quad|\quad\textbf{Interleave:} Python + R implementation, genomic data
+
+\begin{brainbox}[Why this unit matters most]
+Every bad paper in genomics has a statistics problem, not a coding problem.
+
+You don't need to derive proofs. You DO need to know: which distribution fits my data? What test is appropriate? What happens if my assumptions are wrong?
+
+We'll learn by simulating --- generate fake data, break assumptions, see what happens.
+\end{brainbox}
+
+
+\section{Block 7: Distributions, Testing \& Models}
+
+\sprint{1}{What Distribution Is My Data?}{25}
+\begin{itemize}[nosep]
+  \item Simulate each: \texttt{np.random.binomial}, \texttt{np.random.poisson}, \texttt{np.random.negative\_binomial}, \texttt{np.random.normal}
+  \item Plot histograms of each side by side. Now overlay a real dataset (RNA-seq counts, allele frequencies, expression values)
+  \item Key insight: RNA-seq counts are NOT normal. They're negative binomial. This is why DESeq2 uses NB models.
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You can look at a histogram and identify the distribution family. That's statistical intuition.
+\end{winbox}
+
+\begin{tipbox}[The distribution cheat sheet]
+\begin{itemize}[nosep]
+  \item Binomial: counting successes (alt allele reads out of total reads)
+  \item Poisson: rare events (mutations per gene)
+  \item Negative binomial: counts with extra variation (RNA-seq --- this is the big one)
+  \item Normal: continuous measurements after transformation (log-expression, quantitative traits)
+  \item Beta: values between 0 and 1 (allele frequencies, methylation)
+  \item Hypergeometric: overlap significance (gene set enrichment, Fisher's exact test)
+\end{itemize}
+\end{tipbox}
+
+\sprint{2}{Multiple Testing: The Genomics Problem}{25}
+\begin{itemize}[nosep]
+  \item Simulate 1,000,000 null p-values: \texttt{p = np.random.uniform(0, 1, 1\_000\_000)}
+  \item How many are $< 0.05$? About 50,000. That's 50,000 false positives from pure noise.
+  \item Apply Bonferroni: threshold $= 0.05 / 1{,}000{,}000$. Very conservative, misses real signal.
+  \item Apply Benjamini--Hochberg: controls false discovery RATE, not family-wise error. This is the genomics standard.
+  \item Make a QQ plot: sorted $-\log_{10}(\text{observed } P)$ vs.\ $-\log_{10}(\text{expected } P)$. Deviation = signal.
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You saw with your own eyes why $p < 0.05$ fails at genomic scale.
+\end{winbox}
+
+\sprint{3}{Linear Models: The GWAS Engine}{25}
+\begin{itemize}[nosep]
+  \item A GWAS is just a linear regression: phenotype $\sim$ genotype + covariates, run millions of times
+  \item In Python: statsmodels OLS. In R: \texttt{lm()}. Fit a model, interpret coefficients, check residuals.
+  \item GLMs: logistic regression for case/control (binary outcomes), Poisson/NB for count outcomes
+  \item Mixed-effects models: add random effects for family structure or batch --- conceptual understanding is enough for now
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You fit a linear model to genetic data --- a single-SNP association test, which is the core unit of a GWAS.
+\end{winbox}
+
+\begin{warnbox}[Common mistakes to watch for]
+\begin{itemize}[nosep]
+  \item Using a t-test when you have covariates to control for (use regression instead)
+  \item Treating FDR as the probability any specific result is false (it's the expected proportion)
+  \item Ignoring population structure in GWAS (this inflates false positives massively)
+  \item Applying normal-distribution tests to count data (use NB or nonparametric tests)
+\end{itemize}
+\end{warnbox}
+
+
+\section{Block 8: Dimensionality Reduction \& Bayesian Ideas}
+
+\sprint{4}{PCA: See the Hidden Structure}{25}
+\begin{itemize}[nosep]
+  \item Run PCA on 1000 Genomes data (or a pre-computed matrix): \texttt{sklearn.decomposition.PCA}
+  \item Plot PC1 vs PC2. Color by population. The clusters ARE population structure.
+  \item Scree plot: how many PCs capture real signal vs.\ noise? The `elbow' tells you.
+  \item This is why GWAS includes PCs as covariates: they capture ancestry and prevent false associations.
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You see population structure emerge from genotype data. PCA is the most-used tool in genomics.
+\end{winbox}
+
+\sprint{5}{UMAP + Clustering (for Single-Cell)}{25}
+\begin{itemize}[nosep]
+  \item UMAP: nonlinear dimensionality reduction. Useful for single-cell, but easy to over-interpret.
+  \item Key rule: UMAP preserves local structure, not global distances. Clusters close together aren't necessarily similar.
+  \item Leiden clustering: graph-based, resolution-dependent. Try multiple resolutions and compare.
+  \item Practical: load a pre-processed single-cell dataset and make UMAP + cluster plots in scanpy or Seurat
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You made a UMAP plot of single-cell data and critically evaluated what it does and doesn't tell you.
+\end{winbox}
+
+\sprint{6}{Bayesian Thinking (Conceptual)}{25}
+\begin{itemize}[nosep]
+  \item Bayes' theorem in one sentence: update your beliefs with new data. Prior $\times$ Likelihood $\to$ Posterior.
+  \item Empirical Bayes: learn the prior from the data itself. This is how DESeq2 shrinks dispersion estimates.
+  \item Why it matters: Bayesian fine-mapping (SuSiE) gives you credible sets of causal variants, not just p-values.
+  \item You don't need to implement MCMC. You DO need to understand what ``95\% credible set'' means.
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You can explain Bayes' theorem with a genomics example. Conceptual understanding $>$ mathematical derivation.
+\end{winbox}
+
+\begin{restbox}[End of Blocks 7--8]
+This is the most conceptually dense part of the curriculum. Take some time to let it settle before moving into applications.
+\end{restbox}
+
+\subsection{Checkpoint:}
+\begin{itemize}[nosep]
+  \item You can identify which distribution fits a genomic dataset
+  \item You can apply and explain Bonferroni and BH correction
+  \item You can fit a linear model and interpret coefficients
+  \item You can run PCA and explain what population structure looks like
+  \item You can explain empirical Bayes at a conceptual level
+\end{itemize}
+
+\subsection{Resources}
+\begin{itemize}[nosep]
+  \item StatQuest YouTube (Josh Starmer) --- highly recommended for visual explanations of statistical concepts
+  \item Holmes \& Huber -- \textit{Modern Statistics for Modern Biology} (free online)
+  \item Storey \& Tibshirani -- Statistical significance for genomewide studies (the FDR paper)
+\end{itemize}

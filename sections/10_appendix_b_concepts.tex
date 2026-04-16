@@ -1,0 +1,22 @@
+\chapter{Appendix B: Programming Concepts Cheat Sheet}
+
+The concepts you'll use over and over. Bookmark this page.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\headertext{Concept} & \headertext{Why It Matters} \\
+\midrule
+Dictionaries / hash maps & $O(1)$ lookup --- the fastest way to find gene annotations, sample metadata \\
+Vectorized operations & NumPy/R replaces slow loops --- essential for million-variant math \\
+Sparse matrices & scRNA-seq is 95\% zeros --- sparse storage cuts memory 10--100$\times$ \\
+Generators & Stream through billion-line files without loading into RAM \\
+Regular expressions & Parse biological IDs, extract annotations, validate formats \\
+Matrix algebra & PCA, linear models, kinship matrices --- all matrix operations \\
+Parallel processing & Chromosome-parallel GWAS, multi-sample processing \\
+Error handling & Graceful recovery from malformed records in messy real data \\
+Unit testing & Verify your functions work before running on expensive real data \\
+Documentation & Future-you is your most important collaborator \\
+\bottomrule
+\end{tabularx}
+\end{center}

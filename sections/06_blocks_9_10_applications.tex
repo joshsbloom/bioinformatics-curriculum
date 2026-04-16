@@ -1,0 +1,139 @@
+\chapter{Blocks 9--10: Applications --- Single-Cell \& GWAS}
+
+\textbf{Primary:} scRNA-seq pipeline, GWAS pipeline\quad|\quad\textbf{Interleave:} All previous skills converge here
+
+\begin{brainbox}[This is the payoff]
+Everything you learned --- Unix, Python, R, statistics --- comes together in these two blocks. You'll run complete real-world analyses from raw data to biological insight.
+\end{brainbox}
+
+
+\section{Block 9: Single-Cell RNA-seq --- Start to Finish}
+
+\sprint{1}{Technology + Data Orientation}{25}
+\begin{itemize}[nosep]
+  \item 10x Chromium captures RNA from individual cells $\to$ UMI count matrix (genes $\times$ cells)
+  \item Download a public PBMC dataset from 10x Genomics website (pre-processed h5ad is fine to start)
+  \item Load with scanpy: \texttt{adata = sc.read\_h5ad('pbmc.h5ad')}
+  \item Explore: \texttt{adata.shape}, \texttt{adata.obs.head()}, \texttt{adata.var.head()}
+  \item Think: what does each row represent? Each column? What are the expected ranges for counts?
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You have real single-cell data loaded and you understand its structure.
+\end{winbox}
+
+\sprint{2}{QC --- Find and Remove the Junk}{25}
+\begin{itemize}[nosep]
+  \item Calculate QC metrics:
+    \begin{lstlisting}
+sc.pp.calculate_qc_metrics(adata, qc_vars=['mt'])
+    \end{lstlisting}
+    This adds \texttt{n\_genes\_by\_counts}, \texttt{total\_counts}, and \texttt{pct\_counts\_mt} to \texttt{adata.obs}.
+  \item Plot distributions:
+    \begin{lstlisting}
+sc.pl.violin(adata,
+  ['n_genes_by_counts', 'total_counts', 'pct_counts_mt'])
+    \end{lstlisting}
+  \item Filter: keep cells with 200--5000 genes and $<$20\% mito. These thresholds have biological reasons.
+  \item Doublet detection with Scrublet: \texttt{sc.pp.scrublet(adata)} or \texttt{sc.external.pp.scrublet(adata)} depending on scanpy version
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You filtered out low-quality cells and doublets. The data is now clean.
+\end{winbox}
+
+\sprint{3}{Normalize $\to$ HVGs $\to$ PCA $\to$ UMAP $\to$ Cluster}{25}
+\begin{itemize}[nosep]
+  \item \texttt{sc.pp.normalize\_total(adata); sc.pp.log1p(adata)} --- library size normalization
+  \item \texttt{sc.pp.highly\_variable\_genes(adata)} --- select $\sim$2000 informative genes
+  \item Run the pipeline:
+    \begin{lstlisting}
+sc.tl.pca(adata)
+sc.tl.neighbors(adata)
+sc.tl.umap(adata)
+sc.tl.leiden(adata, resolution=0.5)
+    \end{lstlisting}
+  \item \texttt{sc.pl.umap(adata, color=['leiden'])} --- a single-cell cluster plot from raw data
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You went from raw counts to clustered UMAP in 6 lines of code.
+\end{winbox}
+
+\sprint{4}{Annotate Cell Types + Differential Expression}{25}
+\begin{itemize}[nosep]
+  \item Plot known markers: \texttt{sc.pl.dotplot(adata, ['CD3D', 'CD14', 'MS4A1', 'NKG7'], groupby='leiden')}
+  \item Assign labels:
+    \begin{lstlisting}
+adata.obs['cell_type'] = adata.obs['leiden'].map(
+  {0: 'CD4 T', 1: 'Monocytes', ...})
+    \end{lstlisting}
+  \item Pseudobulk DE (the right way): aggregate counts per donor$\times$cell\_type, then use DESeq2 in R
+  \item Why pseudobulk? Cell-level tests inflate p-values because cells from the same donor aren't independent.
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You annotated cell types using marker genes and understand why pseudobulk DE matters. This is current best practice.
+\end{winbox}
+
+\begin{tipbox}[Multi-modal extensions (for your journal)]
+\begin{itemize}[nosep]
+  \item CITE-seq: same cells, RNA + protein measurements $\to$ Seurat WNN for joint embedding
+  \item scATAC-seq: chromatin accessibility per cell $\to$ ArchR, Signac
+  \item Spatial transcriptomics: gene expression + spatial location $\to$ Squidpy, cell2location
+  \item Perturb-seq: CRISPR perturbations linked to transcriptomes $\to$ Mixscape, scMAGeCK
+\end{itemize}
+\end{tipbox}
+
+
+\section{Block 10: GWAS Pipeline --- Variant to Function}
+
+\sprint{5}{Genotype QC with PLINK2}{25}
+\begin{itemize}[nosep]
+  \item PLINK2 is the workhorse. Get a small dataset (HapMap or 1KG subset in PLINK format).
+  \item Sample QC: \texttt{--mind} (call rate), \texttt{--het} (heterozygosity), \texttt{--check-sex}, \texttt{--king-cutoff} (relatedness)
+  \item Variant QC: \texttt{--geno} (call rate), \texttt{--hwe} (Hardy--Weinberg), \texttt{--maf} (minor allele frequency)
+  \item PCA: \texttt{plink2 --pca 10} --- compute population structure. Plot PC1 vs PC2.
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You QC'd a genotype dataset. Every GWAS starts here.
+\end{winbox}
+
+\sprint{6}{Association Testing}{25}
+\begin{itemize}[nosep]
+  \item Simulate a phenotype correlated with genotype (so you know the true answer)
+  \item Run: \texttt{plink2 --glm ...} --- this fits a linear (or logistic) model at every variant
+  \item For real data: use REGENIE or BOLT-LMM (mixed models that handle population structure and relatedness)
+  \item Make a Manhattan plot and QQ plot from the results. Check $\lambda_\text{GC}$ for inflation.
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You ran a GWAS and made the diagnostic plots. You can tell if results are inflated or clean.
+\end{winbox}
+
+\sprint{7}{Post-GWAS: Heritability, Fine-Mapping, Interpretation}{25}
+\begin{itemize}[nosep]
+  \item LDSC: estimate SNP-heritability from summary statistics. How much of the trait is explained by common variants?
+  \item Fine-mapping: SuSiE gives you 95\% credible sets --- the smallest set of variants likely to contain the causal one
+  \item Colocalization (coloc): does my GWAS signal share a causal variant with a nearby eQTL?
+  \item PRS (polygenic risk scores): aggregate small effects across the genome into a single predictor
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You traced a GWAS signal from association to potential causal variant to gene.
+\end{winbox}
+
+\begin{restbox}[End of Blocks 9--10]
+You've now run the two most important analysis pipelines in modern genomics end-to-end. Take a break before the final unit.
+\end{restbox}
+
+\subsection{Checkpoint:}
+\begin{itemize}[nosep]
+  \item You can run a complete scRNA-seq analysis from raw counts to annotated clusters
+  \item You can explain every step in the single-cell pipeline and why each matters
+  \item You can QC genotype data, run an association test, and make Manhattan/QQ plots
+  \item You can explain heritability, fine-mapping, and colocalization at a conceptual level
+\end{itemize}
+
+\subsection{Resources}
+\begin{itemize}[nosep]
+  \item Scanpy tutorials (scanpy.readthedocs.io) --- the PBMC 3k tutorial is the canonical starting point
+  \item Heumos et al.\ -- Best practices for single-cell analysis (Nat Rev Genet, 2023)
+  \item Uffelmann et al.\ -- Genome-wide association studies (Nat Rev Methods Primers, 2021)
+  \item Marees et al.\ -- A tutorial on conducting GWAS (step-by-step, very practical)
+  \item LDSC wiki on GitHub --- the definitive usage guide
+\end{itemize}

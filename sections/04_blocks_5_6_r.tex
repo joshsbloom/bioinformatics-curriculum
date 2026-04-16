@@ -1,0 +1,101 @@
+\chapter{Blocks 5--6: R, Bioconductor \& Differential Expression}
+
+\textbf{Primary:} Bioconductor, differential expression, ggplot2\quad|\quad\textbf{Interleave:} Statistics concepts, Unix file prep
+
+\begin{brainbox}[Why R when you just learned Python?]
+R has Bioconductor --- thousands of biology-specific packages with nothing comparable in Python. DESeq2, edgeR, GenomicRanges, Seurat all live here. You need both languages.
+\end{brainbox}
+
+
+\section{Block 5: R Basics + Bioconductor}
+
+\sprint{1}{R in 25 Minutes}{25}
+\begin{itemize}[nosep]
+  \item Vectors: \texttt{x <- c(1, 2, 3); mean(x)}. Everything in R is a vector. Even a single number.
+  \item Data frames: \texttt{df <- read.csv('samples.tsv', sep='\textbackslash t')}. Like Pandas but different.
+  \item tidyverse: \texttt{library(dplyr); df \%>\% filter(pval < 0.05) \%>\% group\_by(chr) \%>\% summarise(n = n())}
+  \item Key difference from Python: R uses 1-based indexing. \texttt{df[1,]} is the first row, not the second.
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You can filter and summarize data in R. The \texttt{\%>\%} pipe is R's version of Unix \texttt{|}.
+\end{winbox}
+
+\sprint{2}{Bioconductor: GRanges = Genomic Intervals}{25}
+\begin{itemize}[nosep]
+  \item Install: \texttt{BiocManager::install('GenomicRanges')}
+  \item GRanges: \texttt{gr <- GRanges(seqnames='chr1', ranges=IRanges(start=100, end=200))}
+  \item \texttt{findOverlaps(peaks, genes)} --- which peaks overlap which genes? This replaces \texttt{bedtools intersect}.
+  \item \texttt{rtracklayer::import('file.bed')} --- load BED, GFF, BigWig directly into R
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You performed a genomic interval overlap in R. Same concept as bedtools, different syntax.
+\end{winbox}
+
+\sprint{3}{SummarizedExperiment: The Container That Holds Everything}{25}
+\begin{itemize}[nosep]
+  \item SummarizedExperiment = counts matrix + gene info (rowData) + sample info (colData)
+  \item Every Bioconductor analysis tool expects data in this format. Learn it once, use it everywhere.
+  \item Load a real dataset: recount3 or GEOquery to pull RNA-seq data directly from public repositories
+  \item Explore: \texttt{assay(se)[1:5, 1:5]} --- the first 5 genes and 5 samples
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You loaded a real RNA-seq dataset from a public database into R. Data is ready for analysis.
+\end{winbox}
+
+
+\section{Block 6: Differential Expression + ggplot2}
+
+\sprint{4}{DESeq2: The Gold Standard DE Analysis}{50}
+\begin{itemize}[nosep]
+  \item Build a DESeqDataSet from your SummarizedExperiment + a design formula (\texttt{\textasciitilde condition})
+  \item Run: \texttt{dds <- DESeq(dds); res <- results(dds)} --- the entire analysis in two lines
+  \item Understand what happened: normalization (size factors), dispersion estimation (empirical Bayes shrinkage), NB GLM fitting, Wald test
+  \item Extract results: \texttt{res[order(res\$padj), ]} --- genes sorted by significance
+  \item Make a volcano plot: plot $-\log_{10}(\text{pvalue})$ vs.\ $\log_2(\text{FoldChange})$ with ggplot2
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You ran a full differential expression analysis on real data. This is publishable work.
+\end{winbox}
+
+\sprint{5}{ggplot2: Grammar of Graphics}{25}
+\begin{itemize}[nosep]
+  \item The formula: \texttt{ggplot(data, aes(x, y)) + geom\_point() + theme\_minimal()}
+  \item Layers: \texttt{+ geom\_violin() + geom\_boxplot(width=0.1)} --- combine geoms for rich plots
+  \item Facets: \texttt{+ facet\_wrap(\textasciitilde chromosome)} --- split by a variable automatically
+  \item Save: \texttt{ggsave('figure1.pdf', width=8, height=6)} --- publication-ready output
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You created a multi-panel publication figure. This goes in your portfolio.
+\end{winbox}
+
+\sprint{6}{Compare DE Methods (Interleaving!)}{25}
+\begin{itemize}[nosep]
+  \item Run the same dataset through limma-voom: \texttt{voom(counts) + lmFit + eBayes + topTable}
+  \item Compare results: how many genes are significant in DESeq2 but not limma? Vice versa?
+  \item Make a Venn diagram or UpSet plot of the overlap --- this is how real papers compare methods
+  \item Think about why: DESeq2 and limma make different statistical assumptions. Which matter for your data?
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You compared two statistical methods on the same data and thought critically about why results differ.
+\end{winbox}
+
+\begin{restbox}[End of Blocks 5--6]
+You now have working fluency in bash, Python, and R, and can run a differential expression analysis. Take a break before moving on.
+\end{restbox}
+
+\subsection{Checkpoint:}
+\begin{itemize}[nosep]
+  \item You can manipulate data in R with tidyverse
+  \item You understand GRanges and SummarizedExperiment
+  \item You can run a DESeq2 analysis end-to-end
+  \item You can make publication-quality ggplot2 figures
+  \item You can explain what empirical Bayes shrinkage does and why DESeq2 uses it
+\end{itemize}
+
+\subsection{Resources}
+\begin{itemize}[nosep]
+  \item R for Data Science, 2nd Ed (r4ds.hadley.nz) --- free online, excellent
+  \item DESeq2 vignette (follow the Beginner's Guide first, then the full vignette)
+  \item StatQuest YouTube: the DESeq2 and edgeR episodes are outstanding
+  \item Bioconductor workflows: bioconductor.org/packages/release/workflows/
+\end{itemize}

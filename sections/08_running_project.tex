@@ -1,0 +1,310 @@
+\chapter{Running Project: From Growth Curves to QTL Mapping}
+
+This four-part project follows a single scientific narrative: can you find the genetic basis of a yeast strain's response to an unknown compound? Each problem set is designed to be worked on during or shortly after the block that teaches the relevant skills. The problems build on each other, so work through them in order.
+
+All data can be found in the GitHub repository \texttt{joshsbloom/QuantGenSandbox} and on the linked Dropbox. The project culminates in a QTL mapping scan that identifies a candidate gene and generates a hypothesis about the compound's identity.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\headertext{Problem Set} & \headertext{Do After} & \headertext{Skills Practiced} \\
+\midrule
+1. Yeast Growth Curves & Blocks 5--6 (R) & R scripting, ggplot2, t-tests, permutation tests, power simulation \\
+2. Heritability \& Mixed Models & Blocks 7--8 (Stats) & Linear models, random effects, heritability, experimental design \\
+3. Short-Read Alignment \& Strain ID & Blocks 9--10 (Apps) & Unix pipelines, bwa, sambamba, GATK, BLAST, Hamming distance \\
+4. QTL Mapping & Blocks 11--12 (Capstone) & Genome-wide scans, permutation thresholds, LOD scores, confidence intervals \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+
+%% ────────────────────────────────────────────
+\section{Problem Set 1: Yeast Growth Curves}
+
+\textit{\textbf{Work on this after Blocks 5--6.}}
+
+Two yeast strains --- BY (lab reference) and RM (vineyard isolate) --- are grown in YNB + glucose media. You want to determine whether they grow at different rates. 120~\textmu L cultures of each strain were grown overnight to saturation in a 96-well plate (Plate080525\_YNB\_GLU): BY in well A01, RM in well A02. You will inoculate replicate growth curves using a Biomek liquid-handling robot and then analyze the resulting data.
+
+\subsection{Part A: Generate the Biomek Randomization CSV}
+
+The Biomek robot needs a CSV file specifying: which source well to pipette from, which target well to pipette into, and how much volume. The 96-well plate has rows A--H and columns 01--12. All column numbers less than 10 must have a leading zero (e.g., B03, C09).
+
+Goal: Inoculate 1~\textmu L of saturated culture into 30 random wells for each strain, giving you 30 replicate growth curves per strain. Edge wells (row A, row H, column 01, column 12) should be left as media blanks to control for evaporation and contamination.
+
+The CSV must be comma-delimited with DOS line endings and this header:
+
+\texttt{\textit{Source.Plate,Source.Wells,Strain,Target.Plate,Target.Wells,Volume}}
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item Write R code to generate the Biomek CSV file. Use \texttt{set.seed(10)} for reproducibility.
+  \item Useful functions: \texttt{data.frame()}, \texttt{sample()}, \texttt{paste0()}, \texttt{rep()}, \texttt{toupper()}, \texttt{sprintf()}, \texttt{write.table()} with \texttt{eol='\textbackslash r\textbackslash n'}.
+  \item Challenge: write the entire script in 4 lines of R.
+\end{itemize}
+\end{dobox}
+
+\subsection{Part B: Fit Growth Curves \& Extract Doubling Times}
+
+Read in the plate reader data (\texttt{growthCurves\_01.csv}) and the Biomek CSV (\texttt{randomize\_01.csv}) from the \texttt{joshsbloom/QuantGenSandbox} GitHub repository, under \texttt{projects/growthCurves/}.
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item Use the QurvE R package (\texttt{growth.gcFitSpline} function) to fit spline models to the growth curves.
+  \item Use lubridate to convert time stamps into decimal hours.
+  \item Extract doubling times during log-phase growth from the fitted models.
+  \item Visualize a few individual growth curves with their fits to confirm the procedure works and the fitting looks reasonable.
+\end{itemize}
+\end{dobox}
+
+\subsection{Part C: Visualize \& Test for Differences}
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item Use ggplot2 to make a histogram of doubling times by strain (colored by strain).
+  \item Make a violin plot showing individual data points, mean, and 95\% confidence interval of the mean for each strain.
+  \item Use \texttt{t.test()} to test for a difference in means. Think about whether a paired t-test is appropriate here and why or why not.
+\end{itemize}
+\end{dobox}
+
+\subsection{Part D: Permutation Test}
+
+The assumptions of a parametric t-test may not hold. Perform a permutation test to assess significance without distributional assumptions.
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item Generate a null distribution by permuting strain labels 1000 times. For each permutation, compute the t-statistic.
+  \item Visualize the null distribution and mark where the observed (unpermuted) t-statistic falls.
+  \item Calculate a permutation-based p-value.
+  \item Question: What assumptions does the permutation test make? What assumptions of the parametric t-test might be violated here?
+\end{itemize}
+\end{dobox}
+
+\subsection{Part E: Power Analysis by Simulation}
+
+How small a fitness difference can you detect? Evaluate statistical power across a grid of parameters:
+
+\begin{itemize}[nosep]
+  \item Replicates per strain: 3, 6, 12, 24, 48, 96, 384
+  \item Doubling time means for the new strain: 60 to 240 minutes in 3-minute increments
+  \item Assume BY mean = 90 min, SD = 18 min; the other strain has the same SD
+\end{itemize}
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item For each combination: simulate 1000 experiments from two normal distributions with the appropriate means, SD, and sample size.
+  \item Power = fraction of simulations with t-test $p < 0.05$.
+  \item Plot with ggplot2: x = difference in doubling time, y = power, colored by sample size (as a factor).
+  \item Question: If you want to detect a 10-minute difference in doubling time, how many replicates do you need?
+\end{itemize}
+\end{dobox}
+
+
+%% ────────────────────────────────────────────
+\section{Problem Set 2: Heritability \& Mixed Models}
+
+\textit{\textbf{Work on this after Blocks 7--8.}}
+
+An unknown compound, chemical X, may inhibit fungal growth. If different yeast strains respond differently, the trait may be heritable, and you could use QTL mapping to find the genetic basis. Eight lab members set up an experiment with ten yeast isolates in YPD and YPD + chemical X across four 96-well plates. A power outage left you with only endpoint OD readings.
+
+\subsection{Part A: Read \& Merge Data}
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item Read the design file (\texttt{02\_OD\_design.csv}) and the plateR-formatted endpoint OD data (\texttt{02\_OD\_measurements.csv}) from \texttt{joshsbloom/QuantGenSandbox} under \texttt{projects/modelingFixedRandom/}.
+  \item Use the plateR R package to parse the plate data.
+  \item Merge measurements with design into a single data frame.
+\end{itemize}
+\end{dobox}
+
+\subsection{Part B: Visualize}
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item Make $8 \times 12$ heatmaps of OD for each plate using ggplot2 with a viridis color scale. Are there plate- or position-dependent effects?
+  \item Make additional heatmaps showing experimenter and treatment by well position.
+  \item Create a publication-ready 3-panel figure (using patchwork) with panel A twice the size of B and C combined:
+  \item Panel A: Violin plots of endpoint OD by strain with separate violins per treatment. Overlay jittered points, show means, and draw lines connecting YPD vs.\ YPD:X means within each strain.
+  \item Panel B: Violin + jitter plots grouped by experimenter.
+  \item Panel C: Violin + jitter plots grouped by plate.
+  \item Questions: What do you conclude about strain, treatment, experimenter, and plate effects? Why was it problematic to have different people with different pipettes add strain and media?
+\end{itemize}
+\end{dobox}
+
+\subsection{Part C: Fixed-Effects Linear Models}
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item Fit: \texttt{OD \textasciitilde{} strain + treatment + plate + experimenter}. What is the average treatment effect? Use \texttt{Anova()} to test each factor.
+  \item Add an interaction: \texttt{OD \textasciitilde{} strain + treatment + strain:treatment + plate + experimenter}.
+  \item Use a likelihood ratio test to determine whether the interaction term is justified.
+  \item Compare these results to your visualization in Part B.
+\end{itemize}
+\end{dobox}
+
+\subsection{Part D: Broad-Sense Heritability}
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item Restrict to YPD:X wells. Estimate broad-sense heritability: $H^2 = \text{Var}(\text{Strain}) / (\text{Var}(\text{Strain}) + \text{Var}(\text{Residual}))$.
+  \item First ignoring experimenter and plate, then including them.
+  \item How do the estimates differ? Why does accounting for these nuisance variables change the heritability estimate?
+  \item Why is heritability of this trait hard to interpret on its own?
+\end{itemize}
+\end{dobox}
+
+\subsection{Part E: Mixed Model with Random Effects}
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item Fit: \texttt{OD \textasciitilde{} strain * treatment + (1|plate) + (1|experimenter)}. Use lme4 or a similar package.
+  \item Compare to the fixed-effects model using BIC.
+  \item Why are plate and experimenter better modeled as random effects here? Think beyond just the BIC comparison.
+\end{itemize}
+\end{dobox}
+
+\subsection{Part F: Normalized Response to Chemical X}
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item Get residuals from a model of OD with random effects of plate and experimenter.
+  \item Compute mean residuals for each strain in YPD.
+  \item Subtract each strain's YPD mean from its residuals in YPD:X. Retain only these corrected YPD:X values.
+  \item Make a violin plot of these normalized strain responses with jittered data points.
+  \item Question: What does this normalization accomplish? What do you conclude about strain-level sensitivity to chemical X?
+\end{itemize}
+\end{dobox}
+
+\subsection{Part G: Heritability of the Normalized Trait}
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item Estimate $H^2$ for the normalized trait.
+  \item Reflect: how can heritability be misleading? How would the results from Parts F and G guide a QTL mapping experiment?
+\end{itemize}
+\end{dobox}
+
+
+%% ────────────────────────────────────────────
+\section{Problem Set 3: Short-Read Alignment \& Strain Identification}
+
+\textit{\textbf{Work on this after Blocks 9--10.}}
+
+The lab decided to cross BY to one of the wild isolates and use QTL mapping. To do this, HO endonuclease was disabled in each parent (to maintain haploid state), the strains were mated, the resulting diploid was sporulated, and Heriberto tetrad-dissected over 100 tetrads. DNA sequencing libraries were prepared for each segregant and for the unknown wild parent strain. Unfortunately, no one recorded which wild isolate was used. Your job is to figure it out from the sequencing data.
+
+Data files (FASTQ for the mystery strain and segregants, reference genome, and known variant sites) are available on the linked Dropbox.
+
+\subsection{Part A: Identify the Mystery Strain}
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item Manually BLAST a few short reads from the mystery strain FASTQ files against NCBI to confirm they come from yeast.
+  \item Use \texttt{bwa mem} to align the paired-end reads to \texttt{sacCer3.fasta}.
+  \item Pipe the output through sambamba to convert SAM to BAM and sort.
+  \item Visualize the alignments in IGV. Look at the first 10--20 Kbp on ChrI. What do you see? Does it make sense?
+  \item Use GATK ASEReadCounter with the known variant sites (\texttt{mega\_filtered.vcf.gz}) to count reference vs.\ alternate alleles at each site.
+  \item In R: classify sites as alternate (1) or reference (0) based on which allele has more reads.
+  \item Calculate the Hamming distance between the mystery strain's genotypes and each wild isolate in \texttt{sparseMatrixGeno1011.RDS}.
+  \item Question: What is the mystery strain?
+\end{itemize}
+\end{dobox}
+
+\subsection{Part B: Visualize Meiotic Crossovers}
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item Align reads from the first segregant (seg1 FASTQ files) using the same pipeline.
+  \item Retain genotype calls only at variant sites distinguishing BY from the identified mystery strain.
+  \item Recode: BY variants = 0, mystery strain variants = $+1$.
+  \item Visualize variant inheritance across the genome.
+  \item By eye: how many crossovers do you see per chromosome?
+\end{itemize}
+\end{dobox}
+
+\begin{tipbox}[Unix pipeline for this problem set]
+The following commands chain alignment, format conversion, sorting, and variant counting:
+\begin{lstlisting}
+bwa index sacCer3.fasta
+
+bwa mem -t 8 sacCer3.fasta \
+  reads_r1.fq.gz reads_r2.fq.gz \
+  | sambamba view -S -f bam /dev/stdin \
+  | sambamba sort -o output.bam /dev/stdin
+
+gatk ASEReadCounter -R sacCer3.fasta \
+  -I output.bam -V mega_filtered.vcf.gz \
+  -O counts.table
+\end{lstlisting}
+\end{tipbox}
+
+
+%% ────────────────────────────────────────────
+\section{Problem Set 4: QTL Mapping}
+
+\textit{\textbf{Work on this during Blocks 11--12 as your capstone, or alongside the capstone.}}
+
+You now have $\sim$100 haploid recombinant segregants from a cross of BY and the mystery strain you identified in Problem Set 3. Each segregant has been genotyped at marker positions across the genome (encoded as $-1$ for BY alleles and $+1$ for the mystery strain's alleles) and phenotyped for growth in YPD + chemical X.
+
+Your task is to scan the genome for quantitative trait loci (QTLs) --- regions where the inheritance of one parental allele vs.\ the other is correlated with the phenotype.
+
+\subsection{Part A: Genome-Wide LOD Scan}
+
+For each marker, calculate the Pearson correlation ($r$) between genotype and phenotype across all segregants. Convert to a LOD score using:
+
+\begin{equation}
+\text{LOD} = \frac{-n \ln(1 - r^2)}{2 \ln(10)}
+\end{equation}
+
+where $n$ is the number of segregants and $r$ is the Pearson correlation coefficient. The LOD score is a $\log_{10}$ likelihood ratio: a LOD of 2 means the observed linkage is 100$\times$ more likely than expected by chance; a LOD of 3 means 1000$\times$.
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item Calculate the LOD score at every marker position across the genome.
+  \item Plot the LOD score across genomic position (a LOD scan, analogous to a Manhattan plot). Color by chromosome.
+  \item Which marker has the highest LOD score?
+\end{itemize}
+\end{dobox}
+
+\subsection{Part B: Permutation Threshold for Significance}
+
+A LOD of 2 or 3 as a fixed threshold does not account for the number of markers tested or the correlation structure among nearby markers. Use a permutation procedure to establish an empirical genome-wide significance threshold.
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item Permute the assignment of phenotypes to genotypes 1000 times.
+  \item For each permutation, calculate the LOD at every marker and record the maximum LOD across the genome.
+  \item This gives you a null distribution of 1000 genome-wide maximum LOD scores.
+  \item Compare the observed maximum LOD to this null distribution. Visualize the null distribution as a histogram and mark the observed maximum.
+  \item Calculate a permutation-based p-value.
+  \item Question: How could using a simple fixed LOD threshold (e.g., LOD $> 2$) lead to false positives or false negatives?
+\end{itemize}
+\end{dobox}
+
+\subsection{Part C: 1.5-LOD Drop Confidence Interval}
+
+The 1.5-LOD drop interval is a standard method for defining an approximate 95\% confidence interval for the location of a causal variant underlying a QTL.
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item Find the peak marker (highest LOD) for the largest QTL.
+  \item Moving outward in both directions from the peak, find the markers whose LOD is $\geq 1.5$ units below the peak LOD.
+  \item The interval between these flanking markers is your 1.5-LOD drop confidence interval.
+  \item Report the genomic coordinates (chromosome, start, end) of this interval.
+\end{itemize}
+\end{dobox}
+
+\subsection{Part D: Candidate Genes \& Biological Hypothesis}
+
+\begin{dobox}[Tasks]
+\begin{itemize}[nosep]
+  \item List the genes within the 1.5-LOD drop confidence interval. You can use SGD (Saccharomyces Genome Database) or a BED/GFF annotation file.
+  \item Examine the functions of these genes.
+  \item Given what you know from Problem Sets 1--3 about the strains, the experimental setup, and the QTL interval, form a hypothesis: what might chemical X be?
+  \item Write a short paragraph explaining your reasoning.
+\end{itemize}
+\end{dobox}
+
+\begin{brainbox}[Why this project matters]
+You just followed the complete arc of a quantitative genetics experiment: phenotyping (growth curves), estimating heritability (mixed models), genotyping (short-read alignment), and genetic mapping (QTL scan with permutation-based significance and confidence intervals).
+
+Each step required a different combination of Unix, R, statistics, and critical thinking. That integration is the point.
+\end{brainbox}

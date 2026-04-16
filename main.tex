@@ -1,0 +1,197 @@
+\documentclass[11pt, letterpaper]{report}
+
+% ─── Packages ───
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=0.75in, headheight=14pt]{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{microtype}
+\usepackage{listings}
+\usepackage{seqsplit}
+
+% ─── Allow line breaks in \texttt and monospaced text ───
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  breakatwhitespace=false,
+  breakautoindent=false,
+  columns=fullflexible,
+}
+
+% Redefine \texttt to allow hyphenation/breaks at special chars
+\renewcommand{\texttt}[1]{%
+  \begingroup
+  \ttfamily
+  \hyphenchar\font=`\-
+  \spaceskip=.5em plus .2em minus .1em
+  #1%
+  \endgroup
+}
+
+% Allow breaks at underscores, slashes, dots in tt text
+\makeatletter
+\renewcommand{\do}[1]{\catcode`#1=13 \begingroup\lccode`\~=`#1\lowercase{\endgroup\def~{\discretionary{}{}{\char`#1}}}}
+\makeatother
+
+% Allow URL line breaks at more characters
+\makeatletter
+\g@addto@macro{\UrlBreaks}{\UrlOrds}
+\makeatother
+
+% Global: be more tolerant of loose lines rather than overflowing
+\tolerance=1000
+\emergencystretch=1em
+\setlength{\hfuzz}{2pt}
+
+\tcbuselibrary{skins, breakable}
+
+% ─── Colors ───
+\definecolor{navy}{HTML}{1B2A4A}
+\definecolor{teal}{HTML}{0E7C7B}
+\definecolor{slate}{HTML}{4A5568}
+\definecolor{accent}{HTML}{2B6CB0}
+\definecolor{dogreen}{HTML}{38A169}
+\definecolor{dobg}{HTML}{F0FFF4}
+\definecolor{tipblue}{HTML}{3182CE}
+\definecolor{tipbg}{HTML}{EBF8FF}
+\definecolor{warnamber}{HTML}{D69E2E}
+\definecolor{warnbg}{HTML}{FFFFF0}
+\definecolor{winpurple}{HTML}{805AD5}
+\definecolor{winbg}{HTML}{FAF5FF}
+\definecolor{brainpink}{HTML}{D53F8C}
+\definecolor{brainbg}{HTML}{FFF5F7}
+\definecolor{restgray}{HTML}{718096}
+\definecolor{restbg}{HTML}{F7FAFC}
+\definecolor{restbdr}{HTML}{A0AEC0}
+\definecolor{headbg}{HTML}{1B2A4A}
+
+% ─── Heading styles ───
+\titleformat{\chapter}[display]
+  {\normalfont\Huge\bfseries\color{navy}}{}{0pt}{}
+\titlespacing*{\chapter}{0pt}{-20pt}{20pt}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{teal}}{}{0pt}{}
+
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}{}{0pt}{}
+
+% ─── Header/footer ───
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\textit{\color{slate}\small Bioinformatics -- Sprint-Based Curriculum}}
+\fancyfoot[C]{\color{slate}\small Page \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ─── Hyperlinks ───
+\hypersetup{
+  colorlinks=true,
+  linkcolor=accent,
+  urlcolor=teal,
+  citecolor=teal,
+}
+
+% ─── Callout box definitions ───
+\newtcolorbox{dobox}[1][]{
+  enhanced, breakable,
+  colback=dobg, colframe=dogreen,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  fonttitle=\bfseries\color{dogreen},
+  title={\texorpdfstring{$\triangleright$}{>}~#1},
+  borderline west={3pt}{0pt}{dogreen},
+  sharp corners, boxrule=0.5pt,
+}
+
+\newtcolorbox{tipbox}[1][]{
+  enhanced, breakable,
+  colback=tipbg, colframe=tipblue,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  fonttitle=\bfseries\color{tipblue},
+  title={$\diamond$~#1},
+  borderline west={3pt}{0pt}{tipblue},
+  sharp corners, boxrule=0.5pt,
+}
+
+\newtcolorbox{warnbox}[1][]{
+  enhanced, breakable,
+  colback=warnbg, colframe=warnamber,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  fonttitle=\bfseries\color{warnamber},
+  title={$\triangle$~#1},
+  borderline west={3pt}{0pt}{warnamber},
+  sharp corners, boxrule=0.5pt,
+}
+
+\newtcolorbox{winbox}[1][]{
+  enhanced, breakable,
+  colback=winbg, colframe=winpurple,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  fonttitle=\bfseries\color{winpurple},
+  title={\checkmark~#1},
+  borderline west={3pt}{0pt}{winpurple},
+  sharp corners, boxrule=0.5pt,
+}
+
+\newtcolorbox{brainbox}[1][]{
+  enhanced, breakable,
+  colback=brainbg, colframe=brainpink,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  fonttitle=\bfseries\color{brainpink},
+  title={$\bullet$~#1},
+  borderline west={3pt}{0pt}{brainpink},
+  sharp corners, boxrule=0.5pt,
+}
+
+\newtcolorbox{restbox}[1][]{
+  enhanced, breakable,
+  colback=restbg, colframe=restbdr,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  fonttitle=\bfseries\color{restgray},
+  title={#1},
+  borderline west={3pt}{0pt}{restbdr},
+  sharp corners, boxrule=0.5pt,
+}
+
+% ─── Sprint formatting ───
+\newcommand{\sprint}[3]{%
+  \vspace{8pt}
+  {\large\bfseries\color{teal}Sprint #1: #2}\hfill{\small\itshape\color{slate}(#3 min)}
+  \vspace{4pt}
+}
+
+% ─── Table header row color ───
+\newcommand{\headerrow}{\rowcolor{headbg}}
+\newcommand{\headertext}[1]{\textbf{\color{white}#1}}
+
+% ─── Document ───
+\begin{document}
+
+\input{sections/00_titlepage}
+\tableofcontents
+\newpage
+
+\input{sections/01_how_to_use}
+\input{sections/02_blocks_1_2_unix}
+\input{sections/03_blocks_3_4_python}
+\input{sections/04_blocks_5_6_r}
+\input{sections/05_blocks_7_8_statistics}
+\input{sections/06_blocks_9_10_applications}
+\input{sections/07_blocks_11_12_capstone}
+\input{sections/08_running_project}
+\input{sections/09_appendix_a_tools}
+\input{sections/10_appendix_b_concepts}
+\input{sections/11_appendix_c_reading}
+
+\end{document}
