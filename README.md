@@ -2,7 +2,7 @@
 
 A 12-block, sprint-based self-study program covering Unix, Python, R, statistics, and applied genomics (single-cell RNA-seq, GWAS, QTL mapping). Each block is ~2 hours of hands-on work organized as 25-minute sprints with concrete checkpoints. Built for independent learners — no instructor required, all resources freely available.
 
-The compiled curriculum is `main.pdf`.
+**[→ Read the compiled curriculum (main.pdf)](main.pdf)**
 
 ## Build
 
@@ -25,7 +25,7 @@ pdflatex main.tex
 pdflatex main.tex   # second pass resolves the table of contents
 ```
 
-`pdflatex` writes `main.pdf` to the current directory, alongside auxiliary files (`main.aux`, `main.log`, `main.out`, `main.toc`). The first pass builds the `.aux`/`.toc` files but page numbers in the table of contents will be wrong; the second pass reads those files and produces the final 35-page PDF.
+`pdflatex` writes `main.pdf` to the current directory, alongside auxiliary files (`main.aux`, `main.log`, `main.out`, `main.toc`). The first pass builds the `.aux`/`.toc` files but page numbers in the table of contents will be wrong; the second pass reads those files and produces the final PDF.
 
 If you have `latexmk` installed, a single command handles the passes automatically:
 

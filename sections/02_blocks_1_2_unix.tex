@@ -58,30 +58,28 @@ grep -v '^#' file.vcf | awk '{print $1}' | \
 You summarized a genome's worth of variants in one line.
 \end{winbox}
 
-\sprint{4}{Put It All Together on Your VCF}{25}
-Now use the tools from Sprints 1--3 (plus \texttt{sed}, \texttt{cut}, \texttt{sort}) to actually interrogate the VCF you just downloaded. Do each step yourself --- don't just copy. Paste every command (and its one-line output summary) into \texttt{journal.md} as you go.
+\sprint{4}{Put It All Together --- Pick a Restriction Enzyme for Cloning}{25}
+A real scenario: you want to shotgun-clone $\sim$3\,kb fragments of the yeast genome into a plasmid. Three cheap 6-cutters are on the shelf --- EcoRI (\texttt{GAATTC}), BamHI (\texttt{GGATCC}), and HindIII (\texttt{AAGCTT}). \textit{Before} ordering anything, predict from the genome sequence how often each enzyme cuts and which one produces fragments closest to your 3\,kb target. Do it all with pipes --- no scripts yet. Paste every command and its output into \texttt{journal.md} as you go.
 \begin{enumerate}[nosep]
-  \item \textbf{Confirm the download.} Use \texttt{head -n 20 file.vcf} to look at the header, and \texttt{head -n 40 file.vcf | tail -n 5} to peek at the first few variant lines. Do the columns look like a VCF (CHROM, POS, ID, REF, ALT, \ldots)?
-  \item \textbf{Organize your workspace.} You should already have \texttt{\textasciitilde/bioinfo/block1/\{data,scripts,results\}}. Move the VCF and the yeast FASTA into \texttt{data/} in one go, e.g.\ \texttt{ls *.vcf *.fsa 2>/dev/null | xargs -I\{\} mv \{\} \textasciitilde/bioinfo/block1/data/}. Verify with \texttt{ls \textasciitilde/bioinfo/block1/data/}.
-  \item \textbf{How many variants total?} Uncomment lines only: \texttt{grep -vc '\^{}\#' file.vcf}. Is the number in the right ballpark (tens of thousands for yeast)?
-  \item \textbf{Pick a GC-rich region.} In yeast, ribosomal-protein and subtelomeric regions skew GC-high. Pick a chromosome and a 50\,kb window, e.g.\ chr IV, 500{,}000--550{,}000:
+  \item \textbf{Confirm and organize.} \texttt{head} the yeast FASTA --- the first line should start with \texttt{>}. Then move the FASTA (and the VCF from Sprint 3) into \texttt{data/} in one pipeline: \texttt{ls *.fsa *.vcf 2>/dev/null | xargs -I\{\} mv \{\} \textasciitilde/bioinfo/block1/data/}. Verify with \texttt{ls \textasciitilde/bioinfo/block1/data/}.
+  \item \textbf{Measure the genome.} Strip headers and newlines, count characters:
     \begin{lstlisting}
-grep -v '^#' file.vcf | \
-  awk -F'\t' '$1=="IV" && $2>=500000 && $2<=550000' | \
-  wc -l
+grep -v '>' ~/bioinfo/block1/data/*.fsa | \
+  tr -d '\n' | wc -c
     \end{lstlisting}
-  \item \textbf{REF-base nucleotide frequencies in that window.} Extend the pipeline --- grab the REF column (\texttt{\$4}), split into characters, count them:
+    For S288C, expect roughly 12\,Mb. Save this number --- you'll divide by it next.
+  \item \textbf{Count cut sites per enzyme.} Template for EcoRI:
     \begin{lstlisting}
-grep -v '^#' file.vcf | \
-  awk -F'\t' '$1=="IV" && $2>=500000 && $2<=550000 \
-    {print $4}' | \
-  grep -o . | sort | uniq -c | sort -rn
+grep -v '>' ~/bioinfo/block1/data/*.fsa | \
+  tr -d '\n' | grep -o GAATTC | wc -l
     \end{lstlisting}
-    Do A/T and G/C look balanced, or skewed? Compare against a window you expect to be AT-rich.
-  \item \textbf{Save your work.} Every command + its output should now be in \texttt{journal.md}. Commit it.
+    Run it three times --- once each for \texttt{GAATTC}, \texttt{GGATCC}, \texttt{AAGCTT}. Which cuts most? Fewest?
+  \item \textbf{Why one strand is enough.} All three recognition sites are palindromes (read the same on both strands), so every real cut site is already captured by a forward-strand match. For non-palindromic motifs you'd also have to scan the reverse complement --- good to know before you generalize this approach.
+  \item \textbf{Compute average fragment size.} Fragment size $\approx$ genome length $\div$ number of cut sites. Use \texttt{bc}: \texttt{echo "12157105 / NSITES" | bc} (swap in your actual genome length and cut count). Expect numbers in the range of hundreds of bp to tens of kb.
+  \item \textbf{Pick your enzyme.} Which enzyme's average fragment size is closest to your 3\,kb target? Write one sentence in \texttt{journal.md} explaining your choice, and flag which enzyme would be a bad idea (cuts so often you'd get tiny shredded fragments, or so rarely the fragments are too big to clone).
 \end{enumerate}
 \begin{winbox}[Checkpoint]
-Your journal shows: the \texttt{head} confirmation, the move-into-\texttt{data/} pipeline, the total variant count, and the per-window REF-base frequencies --- all done with pipes, no scripts yet.
+Your journal shows the \texttt{head} check, the move-into-\texttt{data/} pipeline, the genome length, cut-site counts for three enzymes, their average fragment sizes, and your enzyme pick with a one-sentence justification --- all produced with pipes.
 \end{winbox}
 
 \begin{tipbox}[Pattern to remember]
@@ -102,30 +100,50 @@ In Unix bioinformatics, the workflow is almost always: EXTRACT columns (cut/awk)
 You have a reusable script. Run it on a different VCF. Same script, different data.
 \end{winbox}
 
-\sprint{6}{Conda --- Never Break Your System Again}{25}
+\sprint{6}{Conda \& Mamba: Isolated, Reproducible Environments}{25}
 \begin{itemize}[nosep]
   \item Create an environment: \texttt{conda create -n biotools samtools bcftools bedtools fastp}
-  \item Activate it: \texttt{conda activate biotools}. Verify: \texttt{samtools --version}
-  \item Export it: \texttt{conda env export > environment.yml} --- now anyone can reproduce your setup
-  \item Deactivate: \texttt{conda deactivate}. Run \texttt{samtools} again --- it's no longer available. Environments isolate dependencies.
+  \item Activate it: \texttt{conda activate biotools}. Verify: \texttt{samtools --version}.
+  \item Export it: \texttt{conda env export > environment.yml} --- anyone can now recreate your setup with \texttt{conda env create -f environment.yml}.
+  \item Deactivate: \texttt{conda deactivate}. Run \texttt{samtools} again --- it's no longer available. Environments isolate dependencies from each other and from the system.
+  \item \textbf{Use mamba for speed.} \texttt{conda}'s dependency solver is slow on large environments. \texttt{mamba} is a drop-in replacement (C++ solver) that resolves the same specs in seconds. Miniforge ships with it; otherwise \texttt{conda install -n base -c conda-forge mamba}. Swap it in wherever you'd type \texttt{conda}: \texttt{mamba create -n biotools samtools bcftools bedtools fastp}.
 \end{itemize}
+\begin{warnbox}[Cross-architecture caveats]
+Conda packages are built per (OS, CPU) pair --- \texttt{linux-64}, \texttt{osx-64}, \texttt{osx-arm64} (Apple Silicon), \texttt{linux-aarch64} (ARM Linux / some HPCs). Not every bioinformatics package has a build for every platform. On an M1/M2/M3 Mac, a missing \texttt{osx-arm64} build usually surfaces as \texttt{PackagesNotFoundError}; common fixes are to (1) create the env under Rosetta with \texttt{CONDA\_SUBDIR=osx-64 conda create \ldots}, or (2) find an alternative package with native ARM support. An \texttt{environment.yml} built on one platform is not guaranteed to solve on another --- expect small fix-ups when moving between laptop and cluster, and note the architecture in a comment at the top of the file.
+\end{warnbox}
 \begin{winbox}[Checkpoint]
-Your environment.yml file is a reproducible recipe. Commit it to Git.
+Your \texttt{environment.yml} is a reproducible recipe. Commit it to Git, with a header comment noting which architecture built it.
 \end{winbox}
 
-\sprint{7}{Git --- Your Time Machine}{25}
+\sprint{7}{Git + GitHub --- Your Time Machine and Portfolio}{25}
 \begin{itemize}[nosep]
-  \item Initialize your repo:
+  \item \textbf{Initialize and commit.}
     \begin{lstlisting}
-cd ~/bioinfo && git init && git add -A && \
+cd ~/bioinfo && git init -b main && \
+  git add -A && \
   git commit -m 'Blocks 1-2: Unix foundations'
     \end{lstlisting}
-  \item Make a change. Run \texttt{git diff}. Stage and commit. Run \texttt{git log --oneline}.
-  \item Create a \texttt{.gitignore} that excludes \texttt{*.bam}, \texttt{*.fastq.gz}, \texttt{*.vcf.gz} (never commit large data)
-  \item Push to GitHub: create a repo, add remote, push. Your work is now backed up and public.
+  \item Edit something. \texttt{git diff} to inspect, \texttt{git add}/\texttt{git commit} to save, \texttt{git log --oneline} to review.
+  \item \textbf{.gitignore.} Exclude anything big or generated: \texttt{*.bam}, \texttt{*.fastq.gz}, \texttt{*.vcf.gz}, \texttt{*.sam}. Never commit raw data --- commit the code that produces it and a pointer to where it lives.
+  \item \textbf{Set up an SSH key for GitHub} (one-time; after this, no password prompts):
+    \begin{lstlisting}
+ssh-keygen -t ed25519 -C "you@example.com"
+# press Enter to accept the default path;
+# optionally set a passphrase
+cat ~/.ssh/id_ed25519.pub
+    \end{lstlisting}
+    Copy the printed public key, then go to github.com $\to$ Settings $\to$ SSH and GPG keys $\to$ New SSH key and paste it. Test: \texttt{ssh -T git@github.com} should greet you by username.
+  \item \textbf{Publish your repo.} Create an empty repo on github.com (don't add a README --- your local copy already has files). Then from your local repo:
+    \begin{lstlisting}
+git remote add origin \
+  git@github.com:<you>/bioinfo-journey.git
+git push -u origin main
+    \end{lstlisting}
+    The \texttt{-u} flag wires \texttt{main} to the remote so future \texttt{git push}es need no arguments.
+  \item \textbf{Clone and pull.} To download a repo onto a new machine or grab someone else's work: \texttt{git clone git@github.com:user/repo.git}. Inside an existing clone, \texttt{git pull} fetches new commits from the remote and merges them into your branch --- this is how you keep a checkout in sync. Practice: clone your own repo into \texttt{/tmp/}, push a change from your main checkout, then run \texttt{git pull} in \texttt{/tmp/} and confirm the change arrived.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-Your bioinfo-journey repo has real commits with real work. This becomes your portfolio.
+Your bioinfo-journey repo has real commits, ignores big files, pushes over SSH without password prompts, and you've proved you can \texttt{clone} and \texttt{pull} from it. This is your portfolio.
 \end{winbox}
 
 \sprint{8}{Integration Sprint: Full Pipeline}{50}
