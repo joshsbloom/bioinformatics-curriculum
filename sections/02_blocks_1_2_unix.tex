@@ -115,7 +115,51 @@ Conda packages are built per (OS, CPU) pair --- \texttt{linux-64}, \texttt{osx-6
 Your \texttt{environment.yml} is a reproducible recipe. Commit it to Git, with a header comment noting which architecture built it.
 \end{winbox}
 
-\sprint{7}{Git + GitHub --- Your Time Machine and Portfolio}{25}
+\sprint{7}{Containers --- Reproducibility Beyond Conda}{25}
+\begin{brainbox}[What is a container?]
+A container is a single image file that bundles an entire Linux userland --- OS libraries, the tool you care about, and everything the tool depends on --- so it runs bit-for-bit identically on any compatible host. Conda manages packages \textit{inside} ecosystems (Python, R, bioconda); containers freeze the layer \textit{below} that, where system libraries, \texttt{glibc} versions, and compiled binaries live. A container is not a virtual machine --- there's no guest kernel --- so startup is near-instant and overhead is minimal.
+
+Rule of thumb: use conda for interactive development (fast to edit, easy to iterate). Use a container when you ship a pipeline to a cluster, share an analysis with a collaborator on a different OS, or archive a workflow alongside a manuscript --- situations where ``works on my machine'' has to become ``works on yours.''
+\end{brainbox}
+
+\begin{itemize}[nosep]
+  \item \textbf{Two runtimes you'll encounter.} \texttt{Docker} is the developer-facing tool --- it requires a privileged daemon, so most shared HPCs will not run it. \texttt{Apptainer} (formerly \texttt{Singularity}) is the HPC-safe equivalent: no daemon, no root, and a container is a single \texttt{.sif} file you can \texttt{scp} around like any other file.
+  \item \textbf{Pull a biocontainer.} The Biocontainers project auto-builds one container per bioconda package. Try samtools:
+    \begin{lstlisting}
+docker pull \
+  quay.io/biocontainers/samtools:1.19--h50ea8bc_0
+    \end{lstlisting}
+  \item \textbf{Run without installing.} Execute the container's \texttt{samtools} with no other setup:
+    \begin{lstlisting}
+docker run --rm \
+  quay.io/biocontainers/samtools:1.19--h50ea8bc_0 \
+  samtools --version
+    \end{lstlisting}
+    \texttt{--rm} discards the stopped container after it exits; the image stays cached for next time.
+  \item \textbf{Mount your data.} Containers see an isolated filesystem by default. Map your current directory in so the tool can read local files:
+    \begin{lstlisting}
+docker run --rm -v "$PWD":/work -w /work \
+  quay.io/biocontainers/samtools:1.19--h50ea8bc_0 \
+  samtools view file.bam | head
+    \end{lstlisting}
+    \texttt{-v HOST:CONTAINER} mounts a host directory; \texttt{-w} sets the working directory inside.
+  \item \textbf{On an HPC, use Apptainer.} Same image, no daemon required:
+    \begin{lstlisting}
+apptainer pull \
+  docker://quay.io/biocontainers/samtools:1.19--h50ea8bc_0
+apptainer exec samtools_1.19--h50ea8bc_0.sif \
+  samtools --version
+    \end{lstlisting}
+    Apptainer auto-mounts your home directory and the current working directory, so most pipelines just work.
+\end{itemize}
+\begin{tipbox}[Conda vs.\ container --- when to reach for which]
+Conda gives you speed and easy iteration at the cost of reproducibility guarantees --- two users with the same \texttt{environment.yml} may still resolve to different package builds on different platforms. A container gives you a fixed binary that will run identically for years, at the cost of being heavier to build and harder to edit. Many published pipelines use both: conda during development, a container (often built \textit{from} the conda env) for the frozen release.
+\end{tipbox}
+\begin{winbox}[Checkpoint]
+You pulled a container, ran a bioinformatics tool from it without installing anything locally, and mounted a host directory into it. You know which runtime (Docker vs.\ Apptainer) you'd reach for on a laptop vs.\ an HPC, and why.
+\end{winbox}
+
+\sprint{8}{Git + GitHub --- Your Time Machine and Portfolio}{25}
 \begin{itemize}[nosep]
   \item \textbf{Initialize and commit.}
     \begin{lstlisting}
@@ -146,7 +190,7 @@ git push -u origin main
 Your bioinfo-journey repo has real commits, ignores big files, pushes over SSH without password prompts, and you've proved you can \texttt{clone} and \texttt{pull} from it. This is your portfolio.
 \end{winbox}
 
-\sprint{8}{Integration Sprint: Full Pipeline}{50}
+\sprint{9}{Integration Sprint: Full Pipeline}{50}
 \begin{itemize}[nosep]
   \item Combine everything: write a bash script that creates a conda env, downloads a FASTQ from SRA (use \texttt{fastq-dump} or \texttt{fasterq-dump}), runs \texttt{fastp} for QC, and logs results to a file
   \item Use \texttt{tmux} or \texttt{screen} so you can disconnect and reconnect (crucial for HPC)
