@@ -6,6 +6,10 @@
 Every bioinformatics pipeline runs on Unix. Genomic data is text. If you can wrangle text in a terminal, you can wrangle genomes.
 \end{brainbox}
 
+\begin{tipbox}[Need to install something?]
+Every non-default tool named anywhere in this curriculum has install commands (macOS and Linux) and an official link in \textbf{Appendix~A}. Flip to it the moment you hit a command that isn't on your machine --- don't guess.
+\end{tipbox}
+
 
 \section{Block 1: The Command Line}
 
@@ -106,7 +110,7 @@ You have a reusable script. Run it on a different VCF. Same script, different da
   \item Activate it: \texttt{conda activate biotools}. Verify: \texttt{samtools --version}.
   \item Export it: \texttt{conda env export > environment.yml} --- anyone can now recreate your setup with \texttt{conda env create -f environment.yml}.
   \item Deactivate: \texttt{conda deactivate}. Run \texttt{samtools} again --- it's no longer available. Environments isolate dependencies from each other and from the system.
-  \item \textbf{Use mamba for speed.} \texttt{conda}'s dependency solver is slow on large environments. \texttt{mamba} is a drop-in replacement (C++ solver) that resolves the same specs in seconds. Miniforge ships with it; otherwise \texttt{conda install -n base -c conda-forge mamba}. Swap it in wherever you'd type \texttt{conda}: \texttt{mamba create -n biotools samtools bcftools bedtools fastp}.
+  \item \textbf{Use mamba for speed.} \texttt{conda}'s dependency solver is slow on large environments. \texttt{mamba} is a drop-in replacement (C++ solver) that resolves the same specs in seconds. Miniforge (\url{https://github.com/conda-forge/miniforge}) ships with it; otherwise \texttt{conda install -n base -c conda-forge mamba}. Swap it in wherever you'd type \texttt{conda}: \texttt{mamba create -n biotools samtools bcftools bedtools fastp}.
 \end{itemize}
 \begin{warnbox}[Cross-architecture caveats]
 Conda packages are built per (OS, CPU) pair --- \texttt{linux-64}, \texttt{osx-64}, \texttt{osx-arm64} (Apple Silicon), \texttt{linux-aarch64} (ARM Linux / some HPCs). Not every bioinformatics package has a build for every platform. On an M1/M2/M3 Mac, a missing \texttt{osx-arm64} build usually surfaces as \texttt{PackagesNotFoundError}; common fixes are to (1) create the env under Rosetta with \texttt{CONDA\_SUBDIR=osx-64 conda create \ldots}, or (2) find an alternative package with native ARM support. An \texttt{environment.yml} built on one platform is not guaranteed to solve on another --- expect small fix-ups when moving between laptop and cluster, and note the architecture in a comment at the top of the file.
@@ -123,7 +127,7 @@ Rule of thumb: use conda for interactive development (fast to edit, easy to iter
 \end{brainbox}
 
 \begin{itemize}[nosep]
-  \item \textbf{Two runtimes you'll encounter.} \texttt{Docker} is the developer-facing tool --- it requires a privileged daemon, so most shared HPCs will not run it. \texttt{Apptainer} (formerly \texttt{Singularity}) is the HPC-safe equivalent: no daemon, no root, and a container is a single \texttt{.sif} file you can \texttt{scp} around like any other file.
+  \item \textbf{Two runtimes you'll encounter.} \texttt{Docker} is the developer-facing tool --- it requires a privileged daemon, so most shared HPCs will not run it. Install Docker Desktop on macOS (\url{https://docs.docker.com/desktop/install/mac-install/}) or the Engine on Linux (\url{https://docs.docker.com/engine/install/}). \texttt{Apptainer} (formerly \texttt{Singularity}) is the HPC-safe equivalent: no daemon, no root, and a container is a single \texttt{.sif} file you can \texttt{scp} around. HPCs usually provide a module (\texttt{module avail apptainer}); for a personal Linux install, see \url{https://apptainer.org/docs/user/main/quick_start.html}.
   \item \textbf{Pull a biocontainer.} The Biocontainers project auto-builds one container per bioconda package. Try samtools:
     \begin{lstlisting}
 docker pull \
@@ -192,9 +196,9 @@ Your bioinfo-journey repo has real commits, ignores big files, pushes over SSH w
 
 \sprint{9}{Integration Sprint: Full Pipeline}{50}
 \begin{itemize}[nosep]
-  \item Combine everything: write a bash script that creates a conda env, downloads a FASTQ from SRA (use \texttt{fastq-dump} or \texttt{fasterq-dump}), runs \texttt{fastp} for QC, and logs results to a file
-  \item Use \texttt{tmux} or \texttt{screen} so you can disconnect and reconnect (crucial for HPC)
-  \item Commit the script and the QC results (not the raw data) to Git
+  \item Combine everything: write a bash script that creates a conda env, downloads a FASTQ from SRA (use \texttt{fastq-dump} or \texttt{fasterq-dump} from the SRA Toolkit --- \texttt{mamba install -c bioconda sra-tools}), runs \texttt{fastp} for QC, and logs results to a file.
+  \item Use \texttt{tmux} (macOS: \texttt{brew install tmux}; Linux: \texttt{sudo apt install tmux}) or \texttt{screen} so you can disconnect and reconnect (crucial for HPC).
+  \item Commit the script and the QC results (not the raw data) to Git.
 \end{itemize}
 \begin{winbox}[Checkpoint]
 A complete, reproducible, version-controlled QC pipeline. From nothing to this in two blocks.

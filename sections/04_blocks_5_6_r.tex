@@ -6,6 +6,10 @@
 R has Bioconductor --- thousands of biology-specific packages with nothing comparable in Python. DESeq2, edgeR, GenomicRanges, Seurat all live here. You need both languages.
 \end{brainbox}
 
+\begin{tipbox}[Install R and RStudio first]
+R is not installed by default on macOS or most Linux distributions. Download the pre-built binary for your OS/architecture from CRAN (\url{https://cran.r-project.org}), then install RStudio Desktop for a comfortable IDE (\url{https://posit.co/download/rstudio-desktop/}). See Appendix~A for more.
+\end{tipbox}
+
 
 \section{Block 5: R Basics + Bioconductor}
 
@@ -55,6 +59,9 @@ You computed per-gene means and per-sample standard deviations on a count matrix
 
 \sprint{3}{Tidyverse as a Modern Layer}{25}
 Base R works, but routine data wrangling is verbose. The tidyverse is a family of packages (\texttt{dplyr}, \texttt{tidyr}, \texttt{readr}, \texttt{purrr}, \texttt{ggplot2}, \texttt{stringr}, \texttt{forcats}, \ldots) that share a consistent grammar: pipe a data frame through a sequence of \textit{verbs}, each returning a modified data frame. Once you internalize the verbs, most analyses become one-glance readable.
+
+Install once with \texttt{install.packages("tidyverse")} in an R session --- that single call pulls in every package listed above. Docs: \url{https://www.tidyverse.org}.
+
 \begin{itemize}[nosep]
   \item \textbf{The pipe.} \texttt{\%>\%} (from \texttt{magrittr}, re-exported by dplyr) and the newer base-R \texttt{|>} (R $\geq$ 4.1) both do the same thing: pass the left-hand side as the first argument of the right-hand side. They're Unix \texttt{|} for data frames.
   \item \textbf{The five verbs you'll use constantly.}

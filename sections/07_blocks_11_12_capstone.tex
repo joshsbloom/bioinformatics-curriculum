@@ -73,11 +73,12 @@ You found and corrected an AI hallucination. This is a critical skill for AI-aug
 
 \sprint{4}{Snakemake: Your Pipeline in Code}{50}
 \begin{itemize}[nosep]
+  \item Install: \texttt{mamba install -c bioconda -c conda-forge snakemake}. Docs: \url{https://snakemake.readthedocs.io/}.
   \item Snakemake defines a pipeline as a set of rules. Each rule: input files $\to$ output files + a shell/Python command.
   \item Start simple: rule download + rule qc + rule align. Run with \texttt{snakemake --cores 4}.
   \item Snakemake automatically figures out the execution order. Change an input file? It re-runs only what's needed.
   \item Add a \texttt{conda:} directive to each rule for per-step environments. Now it's fully reproducible.
-  \item Alternative: Nextflow + nf-core if you prefer. nf-co.re has community-curated pipelines for most assays.
+  \item Alternative: Nextflow + nf-core if you prefer. Install Nextflow with \texttt{curl -s https://get.nextflow.io | bash}. nf-co.re (\url{https://nf-co.re}) has community-curated pipelines for most assays.
 \end{itemize}
 \begin{winbox}[Checkpoint]
 You have a multi-step Snakemake pipeline that someone else could clone and run.

@@ -11,9 +11,9 @@ Everything you learned --- Unix, Python, R, statistics --- comes together in the
 
 \sprint{1}{Technology + Data Orientation}{25}
 \begin{itemize}[nosep]
-  \item 10x Chromium captures RNA from individual cells $\to$ UMI count matrix (genes $\times$ cells)
-  \item Download a public PBMC dataset from 10x Genomics website (pre-processed h5ad is fine to start)
-  \item Load with scanpy: \texttt{adata = sc.read\_h5ad('pbmc.h5ad')}
+  \item 10x Chromium captures RNA from individual cells $\to$ UMI count matrix (genes $\times$ cells).
+  \item Download a public PBMC dataset from the 10x Genomics website (\url{https://www.10xgenomics.com/datasets}); a pre-processed h5ad is fine to start.
+  \item Install scanpy if you haven't: \texttt{mamba install -c conda-forge -c bioconda scanpy}. Docs: \url{https://scanpy.readthedocs.io/}. Load: \texttt{adata = sc.read\_h5ad('pbmc.h5ad')}.
   \item Explore: \texttt{adata.shape}, \texttt{adata.obs.head()}, \texttt{adata.var.head()}
   \item Think: what does each row represent? Each column? What are the expected ranges for counts?
 \end{itemize}
@@ -86,7 +86,7 @@ You annotated cell types using marker genes and understand why pseudobulk DE mat
 
 \sprint{5}{Genotype QC with PLINK2}{25}
 \begin{itemize}[nosep]
-  \item PLINK2 is the workhorse. Get a small dataset (HapMap or 1KG subset in PLINK format).
+  \item PLINK2 is the workhorse. Install via bioconda (\texttt{mamba install -c bioconda plink2}) or download a pre-built binary from \url{https://www.cog-genomics.org/plink/2.0/}. Get a small dataset (HapMap or 1KG subset in PLINK format).
   \item Sample QC: \texttt{--mind} (call rate), \texttt{--het} (heterozygosity), \texttt{--check-sex}, \texttt{--king-cutoff} (relatedness)
   \item Variant QC: \texttt{--geno} (call rate), \texttt{--hwe} (Hardy--Weinberg), \texttt{--maf} (minor allele frequency)
   \item PCA: \texttt{plink2 --pca 10} --- compute population structure. Plot PC1 vs PC2.
@@ -108,9 +108,9 @@ You ran a GWAS and made the diagnostic plots. You can tell if results are inflat
 
 \sprint{7}{Post-GWAS: Heritability, Fine-Mapping, Interpretation}{25}
 \begin{itemize}[nosep]
-  \item LDSC: estimate SNP-heritability from summary statistics. How much of the trait is explained by common variants?
-  \item Fine-mapping: SuSiE gives you 95\% credible sets --- the smallest set of variants likely to contain the causal one
-  \item Colocalization (coloc): does my GWAS signal share a causal variant with a nearby eQTL?
+  \item LDSC (\url{https://github.com/bulik/ldsc}): estimate SNP-heritability from summary statistics. How much of the trait is explained by common variants? Install via conda with a Python 2.7 env or follow the repo instructions.
+  \item Fine-mapping: the SuSiE R package (\url{https://stephenslab.github.io/susieR/}) gives you 95\% credible sets --- the smallest set of variants likely to contain the causal one. \texttt{install.packages("susieR")}.
+  \item Colocalization: the \texttt{coloc} R package (\texttt{install.packages("coloc")}, \url{https://chr1swallace.github.io/coloc/}) asks whether your GWAS signal shares a causal variant with a nearby eQTL.
   \item PRS (polygenic risk scores): aggregate small effects across the genome into a single predictor
 \end{itemize}
 \begin{winbox}[Checkpoint]

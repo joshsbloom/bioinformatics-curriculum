@@ -1,23 +1,94 @@
-\chapter{Appendix A: Tool Quick Reference}
+\chapter{Appendix A: Tools \& Installation}
+
+Every non-default tool referenced in this curriculum, with install commands and official documentation. Most bioinformatics software is installed into a conda environment (see Block 2, Sprint 6); a handful of core tools sit outside conda and should be installed first.
+
+
+\section{Core infrastructure (install once, before anything else)}
+
+\begin{itemize}[nosep]
+  \item \textbf{Miniforge} --- conda + mamba pre-configured for the conda-forge channel. Download and run the installer for your OS/architecture from \url{https://github.com/conda-forge/miniforge}.
+  \item \textbf{Git} --- macOS: \texttt{xcode-select --install} also installs Git as part of the Xcode Command Line Tools. Linux: \texttt{sudo apt install git} (Debian/Ubuntu) or \texttt{sudo dnf install git-all} (Fedora/RHEL). Docs: \url{https://git-scm.com}.
+  \item \textbf{VS Code} --- .dmg (macOS) or .deb / .rpm / tar.gz (Linux) installers at \url{https://code.visualstudio.com}.
+  \item \textbf{Docker} --- macOS: Docker Desktop, \url{https://docs.docker.com/desktop/install/mac-install/}. Linux: the per-distribution Engine install at \url{https://docs.docker.com/engine/install/}. Rootless alternative: Podman, \url{https://podman.io}.
+  \item \textbf{Apptainer} (formerly Singularity) --- HPC clusters usually provide a module (\texttt{module avail apptainer}). For a personal Linux install, see \url{https://apptainer.org/docs/user/main/quick_start.html}. Not supported natively on macOS.
+  \item \textbf{R} --- install the pre-built binary matching your OS/architecture from CRAN: \url{https://cran.r-project.org}.
+  \item \textbf{RStudio Desktop} (recommended IDE for R) --- install after R, free desktop edition: \url{https://posit.co/download/rstudio-desktop/}.
+  \item \textbf{Homebrew} (macOS package manager, useful for everything in the next section) --- one-line install at \url{https://brew.sh}.
+\end{itemize}
+
+
+\section{Command-line utilities not always installed by default}
+
+\begin{itemize}[nosep]
+  \item \texttt{tree} (directory visualization) --- macOS: \texttt{brew install tree}. Debian/Ubuntu: \texttt{sudo apt install tree}. Fedora/RHEL: \texttt{sudo dnf install tree}.
+  \item \texttt{tmux} (persistent terminal sessions, critical on HPC) --- macOS: \texttt{brew install tmux}. Linux: \texttt{sudo apt install tmux} or \texttt{sudo dnf install tmux}. Docs: \url{https://github.com/tmux/tmux/wiki}.
+  \item \texttt{jq} (JSON filtering on the command line) --- macOS: \texttt{brew install jq}. Linux: \texttt{sudo apt install jq}. Docs: \url{https://jqlang.github.io/jq/}.
+  \item \texttt{bc} (arbitrary-precision calculator; used in Block 1 Sprint 4) --- usually default on macOS. On minimal Linux images: \texttt{sudo apt install bc}.
+  \item \texttt{parallel} (GNU parallel, for command-line job parallelism) --- macOS: \texttt{brew install parallel}. Linux: \texttt{sudo apt install parallel}.
+  \item \texttt{curl} / \texttt{wget} --- both default on macOS and most Linux distros; \texttt{sudo apt install curl wget} if either is missing.
+\end{itemize}
+
+
+\section{Bioinformatics tools (install into a conda env)}
+
+All of these are available on the \texttt{bioconda} channel. Make one environment per project and install what you need:
+
+\begin{lstlisting}
+mamba create -n biotools -c conda-forge -c bioconda \
+  samtools bcftools bedtools fastp bwa-mem2 star \
+  sra-tools plink2 regenie snakemake nextflow
+mamba activate biotools
+\end{lstlisting}
+
+\textit{Channel order matters:} \texttt{conda-forge} before \texttt{bioconda}. Channel-priority conflicts are the number-one source of conda installation failures. If you hit one, check your \texttt{.condarc}.
 
 \begin{center}
-\begin{tabularx}{\textwidth}{l l X}
+\small
+\begin{tabularx}{\textwidth}{l X l}
 \toprule
-\headertext{Tool} & \headertext{Category} & \headertext{One-Line Purpose} \\
+\headertext{Tool} & \headertext{Purpose} & \headertext{Official docs} \\
 \midrule
-samtools & Alignment & View/sort/index/filter BAM/CRAM files \\
-bcftools & Variants & Filter/merge/annotate VCF files \\
-bedtools & Intervals & Intersect, merge, closest genomic regions \\
-GATK & Calling & Gold-standard variant calling pipeline \\
-BWA-MEM2 & Alignment & Short-read alignment to reference \\
-STAR & RNA-seq & Splice-aware RNA-seq alignment \\
-fastp & QC & FASTQ quality control + adapter trim \\
-PLINK 2.0 & Genetics & Genotype QC, association, PCA \\
-REGENIE & GWAS & Scalable mixed-model association \\
-LDSC & Post-GWAS & Heritability + genetic correlation \\
-SuSiE & Fine-map & Credible set identification \\
-CellRanger & scRNA & 10x Genomics read processing \\
-Snakemake & Pipeline & Reproducible workflow DAGs \\
+samtools & View/sort/index/filter BAM \& CRAM & \texttt{htslib.org} \\
+bcftools & Filter/merge/annotate VCFs & \texttt{htslib.org} \\
+bedtools & Intersect, merge, closest genomic regions & \texttt{bedtools.readthedocs.io} \\
+GATK & Variant calling (HaplotypeCaller, JointGenotyping) & \texttt{gatk.broadinstitute.org} \\
+BWA-MEM2 & Short-read DNA alignment & \texttt{github.com/bwa-mem2/bwa-mem2} \\
+STAR & Splice-aware RNA-seq alignment & \texttt{github.com/alexdobin/STAR} \\
+fastp & FASTQ QC + adapter trimming & \texttt{github.com/OpenGene/fastp} \\
+SRA Toolkit (\texttt{fastq-dump}, \texttt{fasterq-dump}) & Download FASTQ from SRA & \texttt{github.com/ncbi/sra-tools} \\
+PLINK 2.0 & Genotype QC, GWAS, PCA & \texttt{cog-genomics.org/plink/2.0} \\
+REGENIE & Mixed-model GWAS & \texttt{rgcgithub.github.io/regenie} \\
+LDSC & Heritability + genetic correlation from summary stats & \texttt{github.com/bulik/ldsc} \\
+SuSiE (R package) & Fine-mapping credible sets & \texttt{stephenslab.github.io/susieR} \\
+CellRanger & 10x Genomics read processing (registration required; not on bioconda) & \texttt{10xgenomics.com/support/software/cell-ranger} \\
+Snakemake & Reproducible workflow DAGs & \texttt{snakemake.readthedocs.io} \\
+Nextflow & Alternative workflow engine (nf-core pipelines) & \texttt{nextflow.io} \\
 \bottomrule
 \end{tabularx}
 \end{center}
+
+
+\section{R and Python packages}
+
+\textbf{R (CRAN).} Inside an R session: \texttt{install.packages("tidyverse")} --- one command pulls in \texttt{dplyr}, \texttt{ggplot2}, \texttt{readr}, \texttt{purrr}, \texttt{tidyr}, \texttt{stringr}, \texttt{forcats}. Also useful: \texttt{install.packages(c("data.table", "lme4", "broom"))}.
+
+\textbf{R (Bioconductor).} Inside an R session:
+\begin{lstlisting}
+install.packages("BiocManager")
+BiocManager::install(c("GenomicRanges", "DESeq2",
+                       "edgeR", "limma",
+                       "SummarizedExperiment",
+                       "rtracklayer", "GEOquery",
+                       "recount3", "Seurat"))
+\end{lstlisting}
+Bioconductor home: \url{https://bioconductor.org}.
+
+\textbf{Python.} Install into an active conda env:
+\begin{lstlisting}
+mamba install -c conda-forge -c bioconda \
+  pandas numpy matplotlib seaborn \
+  scipy statsmodels scikit-learn \
+  pysam biopython scanpy scikit-allel \
+  umap-learn
+\end{lstlisting}
+The \texttt{pip} equivalent works too; prefer conda when a package wraps a C library (\texttt{pysam}, \texttt{scanpy}) so the pre-built binary is used.
