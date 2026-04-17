@@ -4,81 +4,31 @@ A 12-block, sprint-based self-study program covering Unix, Python, R, statistics
 
 **[→ Read the compiled curriculum (main.pdf)](main.pdf)**
 
+## Goals
+
+The specific bioinformatics exercises are a vehicle for a broader set of skills. By the end of the curriculum, you should have:
+
+- **General programming competency** in Unix, Python, and R — enough to parse files, write reusable scripts, manipulate tabular and genomic data, and make publication-quality figures.
+- **A mental model of the software stack** that most bioinformatics work depends on: the OS and shell; conda environments and containers; language runtimes and their package ecosystems; domain-specific libraries and pipeline engines. Knowing which layer you are operating at is what lets you diagnose problems instead of flailing.
+- **Competent use of AI tools** as part of everyday work: prompting with enough context and constraints to get runnable code, spotting hallucinated APIs, verifying against primary documentation, and treating AI output as a draft rather than an oracle.
+- **The ability to ask the right question** before an analysis: what is the biological question, what would a positive result look like, what would a null result look like, what could fool you.
+- **Project structure instincts**: version-controlled code, reproducible environments, ignore-listed raw data, self-explanatory directory layout, journaled progress. Work that someone else (or future you) can clone and re-run.
+- **Layer-by-layer evaluation skills**: at each step of a pipeline, the ability to say what should be true, check that it is, and recognize what has gone wrong when it isn't. This is where verification and real understanding live.
+
 ## Build
 
-### Prerequisites
-
-Install a LaTeX distribution that includes `pdflatex`:
-
-- **Linux (Debian/Ubuntu):** `sudo apt install texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended`
-- **macOS:** install [MacTeX](https://www.tug.org/mactex/) (or the smaller BasicTeX and then `tlmgr install` the packages below)
-- **Windows:** install [MiKTeX](https://miktex.org/) or [TeX Live](https://tug.org/texlive/)
-
-The document uses these LaTeX packages (all standard in a full TeX Live / MacTeX / MiKTeX install): `amsmath`, `amssymb`, `tcolorbox`, `tabularx`, `longtable`, `enumitem`, `booktabs`, `fancyhdr`, `titlesec`, `parskip`, `listings`, `microtype`, `seqsplit`, `hyperref`, `xcolor`, `geometry`, `lmodern`.
-
-### Compile
-
-Run both commands from the repository root (where `main.tex` lives):
-
-```bash
-pdflatex main.tex
-pdflatex main.tex   # second pass resolves the table of contents
-```
-
-`pdflatex` writes `main.pdf` to the current directory, alongside auxiliary files (`main.aux`, `main.log`, `main.out`, `main.toc`). The first pass builds the `.aux`/`.toc` files but page numbers in the table of contents will be wrong; the second pass reads those files and produces the final PDF.
-
-If you have `latexmk` installed, a single command handles the passes automatically:
-
-```bash
-latexmk -pdf main.tex
-```
-
-### Clean
-
-To remove build artifacts (keeping `main.pdf`):
-
-```bash
-rm -f main.aux main.log main.out main.toc
-```
-
-Or with `latexmk`: `latexmk -c` (keeps `main.pdf`) or `latexmk -C` (also removes `main.pdf`).
-
-## Repository layout
-
-```
-main.tex              top-level document (preamble + \input order)
-main.pdf              compiled output
-sections/             chapter sources (one .tex per chapter / appendix)
-  00_titlepage.tex
-  01_how_to_use.tex
-  02_blocks_1_2_unix.tex
-  03_blocks_3_4_python.tex
-  04_blocks_5_6_r.tex
-  05_blocks_7_8_statistics.tex
-  06_blocks_9_10_applications.tex
-  07_blocks_11_12_capstone.tex
-  08_running_project.tex
-  09_appendix_a_tools.tex
-  10_appendix_b_concepts.tex
-  11_appendix_c_reading.tex
-```
+The pre-built PDF is in the repo; you only need to build it yourself if you edit the sources. See **[BUILD.md](BUILD.md)** for prerequisites, compile commands, cleanup, and the repository layout.
 
 ## Curriculum at a glance
 
 | Block | Topic | Focus |
 |-------|-------|-------|
 | 0     | Setup | Terminal, conda, Git, editor |
-| 1–2   | Unix | Pipes, scripting, conda environments |
+| 1–2   | Unix | Pipes, scripting, conda environments, containers |
 | 3–4   | Python | Parsing, Pandas, plotting, bio libraries |
 | 5–6   | R | Bioconductor, DESeq2, ggplot2 |
 | 7–8   | Statistics | Distributions, multiple testing, PCA, Bayesian ideas |
 | 9–10  | Applications | scRNA-seq pipeline, GWAS pipeline |
 | 11–12 | Capstone | AI-assisted analysis, Snakemake, final project |
 
-A running four-part yeast-genetics project (growth curves → heritability → strain ID → QTL mapping) threads through blocks 5–12; see `sections/08_running_project.tex`.
-
-## Editing
-
-- Content edits go in the relevant file under `sections/`.
-- Shared preamble (packages, colors, callout boxes, the `\sprint` macro) lives in `main.tex`.
-- Use the existing callout boxes (`brainbox`, `dobox`, `tipbox`, `warnbox`, `winbox`, `restbox`) rather than inventing new ones — they carry the document's visual vocabulary.
+A running four-part yeast-genetics project (growth curves → heritability → strain ID → QTL mapping) threads through Blocks 5–12; see `sections/08_running_project.tex`.
