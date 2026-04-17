@@ -10,19 +10,22 @@ You just learned to process text files with grep and awk. Python does the same t
 \section{Block 3: Core Python via Biology}
 
 \sprint{1}{Data Structures Are Biology}{25}
+Pythonic code is less about clever tricks and more about reaching for the right built-in collection. Each has a natural biological use case.
 \begin{itemize}[nosep]
-  \item Strings = DNA sequences. Try:
+  \item \textbf{Strings = DNA sequences.}
     \begin{lstlisting}
 seq = 'ATGCGATCG'
 comp = seq.translate(str.maketrans('ATCG','TAGC'))
 print(comp[::-1])  # reverse complement
     \end{lstlisting}
-  \item Dictionaries = lookup tables. Build a codon table: \texttt{codons = \{'ATG': 'M', 'TAA': '*', 'GCT': 'A', ...\}} and translate a sequence three codons at a time
-  \item Sets = overlaps. \texttt{set(sampleA) \& set(sampleB)} gives you shared samples in one line
-  \item Lists + comprehensions = fast filtering: \texttt{[g for g in genes if g.startswith('BRCA')]}
+  \item \textbf{Lists = ordered, mutable collections.} Comprehensions are how you filter them: \texttt{[g for g in genes if g.startswith('BRCA')]}. Swap the brackets for parentheses to get a \textit{generator expression} that yields items one at a time without building the full list in memory.
+  \item \textbf{Tuples = immutable records.} Genomic coordinates are a natural fit: \texttt{peak = ("chr1", 1000, 2000)}. Because tuples are immutable, they're hashable --- so they can serve as dict keys or live in sets (``which regions have I already processed?'').
+  \item \textbf{Dictionaries = lookup tables.} Build a codon table: \texttt{codons = \{'ATG':\,'M', 'TAA':\,'*', 'GCT':\,'A', \ldots\}} and translate three bases at a time.
+  \item \textbf{Sets = membership and overlap.} \texttt{set(sampleA) \& set(sampleB)} (intersection), \texttt{|} (union), \texttt{-} (difference). Use them when order doesn't matter and you care about presence/absence.
+  \item \textbf{\texttt{collections.Counter} and \texttt{defaultdict}.} \texttt{Counter(seq).most\_common(4)} counts every character and returns the top four --- no ``does this key exist yet?'' dance. \texttt{defaultdict(list)} lets you write \texttt{d[chrom].append(pos)} without initializing each chromosome's list by hand.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You translated a DNA sequence using a Python dictionary. Data structures map directly to biological concepts.
+You reverse-complemented DNA with \texttt{str.translate}, counted nucleotide frequencies with \texttt{Counter}, and grouped positions by chromosome with \texttt{defaultdict}. Idiomatic Python is about picking the right container, not writing loops.
 \end{winbox}
 
 \sprint{2}{Parsing Genomic Files}{25}
@@ -46,6 +49,42 @@ You can parse any text-based genomic file. This is a skill you'll use indefinite
 Your FASTA parser works on any size file. That's production-quality code.
 \end{winbox}
 
+\sprint{4}{Pythonic Idioms \& Type Hints}{25}
+Writing Python that other people (and future-you) can read quickly is less about clever tricks and more about using the idioms the language was built around. Each of these takes five minutes to learn and saves hours of debugging.
+\begin{itemize}[nosep]
+  \item \textbf{f-strings.} \texttt{f"\{gene\} on chr\{chrom\} (padj=\{pval:.2e\})"} --- variables, formatting, and expressions in one readable line. Use these exclusively for user-facing strings; they're faster than \texttt{\%} or \texttt{.format()} and much harder to misread.
+  \item \textbf{\texttt{pathlib} for filesystem paths.}
+    \begin{lstlisting}
+from pathlib import Path
+data = Path.home() / "bioinfo" / "block1" / "data"
+for vcf in data.glob("*.vcf"):
+    print(vcf.stem, vcf.stat().st_size)
+    \end{lstlisting}
+    Path objects beat string concatenation: they handle OS differences, support \texttt{/} for joining, and expose \texttt{.stem}, \texttt{.suffix}, \texttt{.parent}, \texttt{.exists()}.
+  \item \textbf{\texttt{enumerate} and \texttt{zip}.} Almost never write \texttt{for i in range(len(xs))} --- use \texttt{for i, x in enumerate(xs)} or \texttt{for a, b in zip(xs, ys)}. These are the canonical ways to walk sequences.
+  \item \textbf{Dataclasses for records.}
+    \begin{lstlisting}
+from dataclasses import dataclass
+
+@dataclass
+class Variant:
+    chrom: str
+    pos: int
+    ref: str
+    alt: str
+    qual: float = 0.0
+    \end{lstlisting}
+    You get \texttt{\_\_init\_\_}, \texttt{\_\_repr\_\_}, and equality for free, with attribute access (\texttt{v.pos}) instead of \texttt{v["pos"]}. Prefer these over parallel lists or dicts-of-fields for anything with a fixed shape.
+  \item \textbf{Type hints.} Annotations like \texttt{def parse\_vcf(path: Path) -> list[Variant]:} are not enforced at runtime, but tools (\texttt{mypy}, Pyright, your editor) use them to catch bugs before you run the code, and they're the best function documentation you can write. Start with hints on function signatures and dataclass fields --- don't try to annotate everything at once.
+  \item \textbf{Context managers beyond \texttt{open()}.} \texttt{with pysam.AlignmentFile(\ldots) as bam:}, \texttt{with tempfile.TemporaryDirectory() as d:}, \texttt{with contextlib.suppress(FileNotFoundError):}. Any resource that needs deterministic cleanup --- file handles, temp dirs, database cursors, locks --- is a candidate.
+\end{itemize}
+\begin{tipbox}[Reach for the stdlib first]
+Before adding a dependency, check \texttt{collections}, \texttt{itertools}, \texttt{functools}, \texttt{pathlib}, \texttt{dataclasses}, \texttt{contextlib}, \texttt{statistics}. The Python standard library solves most problems you'll hit in genomics scripting, and stdlib code ages well --- no surprise breaking changes when your analysis reviewer tries to rerun it two years later.
+\end{tipbox}
+\begin{winbox}[Checkpoint]
+You wrote a function with a type-hinted signature, a dataclass for one biological record, and a \texttt{pathlib}-based file iteration. This is Python that will read well in a pull request.
+\end{winbox}
+
 \begin{tipbox}[The Python $\leftrightarrow$ Unix bridge]
 You already know \texttt{awk '\{print \$1\}'} extracts column 1. The Python equivalent: \texttt{line.split('\textbackslash t')[0]}. Your Unix skills transfer directly. When in doubt, prototype in awk, then scale up in Python.
 \end{tipbox}
@@ -53,7 +92,7 @@ You already know \texttt{awk '\{print \$1\}'} extracts column 1. The Python equi
 
 \section{Block 4: Pandas, Plotting \& Bio Libraries}
 
-\sprint{4}{Pandas for Tabular Genomic Data}{25}
+\sprint{5}{Pandas for Tabular Genomic Data}{25}
 \begin{itemize}[nosep]
   \item Load GWAS summary stats: \texttt{df = pd.read\_csv('sumstats.tsv', sep='\textbackslash t', dtype=\{'CHR': str\})}
   \item Filter: \texttt{sig = df[df['P'] < 5e-8]} --- genome-wide significant hits
@@ -64,7 +103,7 @@ You already know \texttt{awk '\{print \$1\}'} extracts column 1. The Python equi
 You loaded, filtered, and grouped real GWAS data. This replaces hours of spreadsheet work.
 \end{winbox}
 
-\sprint{5}{Visualization}{25}
+\sprint{6}{Visualization}{25}
 \begin{itemize}[nosep]
   \item Manhattan plot: scatter plot of $-\log_{10}(P)$ vs.\ genomic position, colored by chromosome
   \item QQ plot: expected vs.\ observed $-\log_{10}(P)$ --- the standard GWAS diagnostic
@@ -75,7 +114,7 @@ You loaded, filtered, and grouped real GWAS data. This replaces hours of spreads
 You made a Manhattan plot from real data. Screenshot it for your portfolio.
 \end{winbox}
 
-\sprint{6}{NumPy + SciPy = Fast Math}{25}
+\sprint{7}{NumPy + SciPy = Fast Math}{25}
 \begin{itemize}[nosep]
   \item NumPy arrays: 100$\times$ faster than Python lists for math. \texttt{np.mean(quality\_scores)} instead of \texttt{sum()/len()}
   \item Vectorized operations: never loop over millions of variants. \texttt{genotypes * 2} multiplies every element at once.
@@ -86,7 +125,7 @@ You made a Manhattan plot from real data. Screenshot it for your portfolio.
 You ran a statistical test on biological data in Python. No GUI, no spreadsheets --- just code.
 \end{winbox}
 
-\sprint{7}{Bio Libraries: pysam, Biopython, scanpy}{25}
+\sprint{8}{Bio Libraries: pysam, Biopython, scanpy}{25}
 \begin{itemize}[nosep]
   \item pysam: read BAM files programmatically. Count reads mapping to a gene in 3 lines.
   \item Biopython: \texttt{SeqIO.parse()} handles FASTA, FASTQ, GenBank. \texttt{Entrez.efetch()} queries NCBI.

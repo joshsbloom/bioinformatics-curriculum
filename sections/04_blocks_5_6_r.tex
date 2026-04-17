@@ -9,18 +9,79 @@ R has Bioconductor --- thousands of biology-specific packages with nothing compa
 
 \section{Block 5: R Basics + Bioconductor}
 
-\sprint{1}{R in 25 Minutes}{25}
+\sprint{1}{R in 25 Minutes --- Vectors, Lists, Data Frames}{25}
 \begin{itemize}[nosep]
-  \item Vectors: \texttt{x <- c(1, 2, 3); mean(x)}. Everything in R is a vector. Even a single number.
-  \item Data frames: \texttt{df <- read.csv('samples.tsv', sep='\textbackslash t')}. Like Pandas but different.
-  \item tidyverse: \texttt{library(dplyr); df \%>\% filter(pval < 0.05) \%>\% group\_by(chr) \%>\% summarise(n = n())}
-  \item Key difference from Python: R uses 1-based indexing. \texttt{df[1,]} is the first row, not the second.
+  \item \textbf{Vectors.} \texttt{x <- c(1, 2, 3); mean(x)}. Everything in R is a vector --- even a single number is a length-1 vector. Vectors are \textit{homogeneous}: one type throughout (numeric, character, logical).
+  \item \textbf{Lists.} Heterogeneous containers:
+    \begin{lstlisting}
+res <- list(pval = 0.003,
+            estimate = 1.42,
+            samples = c("A", "B", "C"))
+res$pval          # 0.003
+res[["samples"]]  # c("A", "B", "C")
+    \end{lstlisting}
+    Access by name with \texttt{\$} or \texttt{[[}. Every complex R object --- \texttt{lm()} output, a \texttt{DESeqDataSet}, a phylo tree --- is a list underneath. Learn \texttt{str(obj)} now; you'll use it constantly to dig into unfamiliar objects.
+  \item \textbf{Data frames.} A list of equal-length columns with row-and-column indexing: \texttt{df <- read.csv('samples.tsv', sep='\textbackslash t')}. First three commands on any new data frame: \texttt{head(df)}, \texttt{names(df)}, \texttt{str(df)}.
+  \item \textbf{Indexing gotchas.} R is 1-based: \texttt{df[1,]} is row 1, not row 2. Negative indices \textit{exclude}: \texttt{df[-1,]} drops row 1. Logical vectors filter: \texttt{df[df\$pval < 0.05, ]}.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You can filter and summarize data in R. The \texttt{\%>\%} pipe is R's version of Unix \texttt{|}.
+You loaded a TSV, inspected its structure with \texttt{str()}, pulled one column and one row, and know the difference between a vector, a list, and a data frame. Apply functions and the tidyverse come next.
 \end{winbox}
 
-\sprint{2}{Bioconductor: GRanges = Genomic Intervals}{25}
+\sprint{2}{Lists, the Apply Family \& Functional R}{25}
+R grew up as a functional language: instead of writing for-loops, you hand a function to another function that runs it over a collection. This pattern is everywhere in R code --- you need to read it fluently even if you'd rather write loops.
+\begin{itemize}[nosep]
+  \item \textbf{\texttt{lapply()} --- run f over a list, return a list.}
+    \begin{lstlisting}
+genes <- list(BRCA1 = counts1, BRCA2 = counts2)
+means <- lapply(genes, mean)
+# means$BRCA1, means$BRCA2
+    \end{lstlisting}
+  \item \textbf{\texttt{sapply()}} does the same and simplifies to a vector/matrix when it can. Convenient interactively; prefer \texttt{vapply()} in scripts --- it type-checks the return shape and fails loudly when a single element deviates.
+  \item \textbf{\texttt{apply()} --- walk rows or columns of a matrix.}
+    \begin{lstlisting}
+row_means <- apply(counts_matrix, 1, mean)
+col_sds   <- apply(counts_matrix, 2, sd)
+    \end{lstlisting}
+    First arg = matrix; \texttt{1} = rows, \texttt{2} = columns; third arg = the function.
+  \item \textbf{\texttt{mapply()} / \texttt{Map()} --- over multiple parallel inputs.} \texttt{mapply(t.test, group\_a\_list, group\_b\_list)} runs a t-test pairing element 1 of each, element 2 of each, etc.
+  \item \textbf{\texttt{tapply()} --- split by a grouping vector, then apply.} \texttt{tapply(expression, tissue, mean)} is ``mean expression per tissue'' in one call.
+  \item \textbf{Why this matters.} DESeq2 results come back as a list; \texttt{apply()} is how you compute per-gene statistics; \texttt{lapply()} appears in every production R pipeline. Loops are not wrong, but apply-family code is shorter and more idiomatic.
+  \item \textbf{The modern equivalent.} The \texttt{purrr} package (part of the tidyverse) gives you \texttt{map()}, \texttt{map\_dbl()}, \texttt{map\_chr()}, \texttt{map2()}, \texttt{pmap()} --- same idea, stricter return types. We'll use \texttt{purrr::map\_dbl()} in the next sprint.
+\end{itemize}
+\begin{winbox}[Checkpoint]
+You computed per-gene means and per-sample standard deviations on a count matrix without writing a single explicit loop. This is the R way.
+\end{winbox}
+
+\sprint{3}{Tidyverse as a Modern Layer}{25}
+Base R works, but routine data wrangling is verbose. The tidyverse is a family of packages (\texttt{dplyr}, \texttt{tidyr}, \texttt{readr}, \texttt{purrr}, \texttt{ggplot2}, \texttt{stringr}, \texttt{forcats}, \ldots) that share a consistent grammar: pipe a data frame through a sequence of \textit{verbs}, each returning a modified data frame. Once you internalize the verbs, most analyses become one-glance readable.
+\begin{itemize}[nosep]
+  \item \textbf{The pipe.} \texttt{\%>\%} (from \texttt{magrittr}, re-exported by dplyr) and the newer base-R \texttt{|>} (R $\geq$ 4.1) both do the same thing: pass the left-hand side as the first argument of the right-hand side. They're Unix \texttt{|} for data frames.
+  \item \textbf{The five verbs you'll use constantly.}
+    \begin{lstlisting}
+library(dplyr)
+de_results |>
+  filter(padj < 0.05) |>
+  mutate(direction = if_else(log2FC > 0,
+                             "up", "down")) |>
+  group_by(chromosome, direction) |>
+  summarise(n = n(), .groups = "drop") |>
+  arrange(desc(n))
+    \end{lstlisting}
+    \texttt{filter} picks rows; \texttt{mutate} adds/changes columns; \texttt{group\_by} + \texttt{summarise} compute per-group statistics; \texttt{arrange} sorts; \texttt{select} picks columns. Five verbs cover 80\% of real analysis.
+  \item \textbf{Tibbles.} \texttt{tibble()} creates a modern data frame that prints neatly (no auto-factor conversion, no surprising type coercion). \texttt{readr::read\_csv()} returns a tibble; it behaves like a \texttt{data.frame} everywhere else.
+  \item \textbf{Reshaping.} \texttt{pivot\_longer()} and \texttt{pivot\_wider()} (\texttt{tidyr}) go between wide and long formats --- critical for plotting in ggplot2 and for joining disparate datasets.
+  \item \textbf{Joins.} \texttt{inner\_join()}, \texttt{left\_join()}, \texttt{anti\_join()}. Merge GWAS summary stats with gene annotations by SNP ID in one line.
+  \item \textbf{\texttt{across()} for column-wise operations.} \texttt{mutate(across(starts\_with("sample\_"), log1p))} log-transforms every sample column at once.
+\end{itemize}
+\begin{tipbox}[When to stay in base R]
+Tidyverse is great for interactive analysis and scripts humans will read. Package authors often prefer base R internally --- it has zero dependencies and a more stable API. Both styles are valid; most real projects mix them.
+\end{tipbox}
+\begin{winbox}[Checkpoint]
+You chained five dplyr verbs to go from raw DE results to a ranked table of up/down counts per chromosome. Compare the equivalent base-R code (\texttt{aggregate}, nested \texttt{[}) --- same output, very different ergonomics.
+\end{winbox}
+
+\sprint{4}{Bioconductor: GRanges = Genomic Intervals}{25}
 \begin{itemize}[nosep]
   \item Install: \texttt{BiocManager::install('GenomicRanges')}
   \item GRanges: \texttt{gr <- GRanges(seqnames='chr1', ranges=IRanges(start=100, end=200))}
@@ -31,7 +92,7 @@ You can filter and summarize data in R. The \texttt{\%>\%} pipe is R's version o
 You performed a genomic interval overlap in R. Same concept as bedtools, different syntax.
 \end{winbox}
 
-\sprint{3}{SummarizedExperiment: The Container That Holds Everything}{25}
+\sprint{5}{SummarizedExperiment: The Container That Holds Everything}{25}
 \begin{itemize}[nosep]
   \item SummarizedExperiment = counts matrix + gene info (rowData) + sample info (colData)
   \item Every Bioconductor analysis tool expects data in this format. Learn it once, use it everywhere.
@@ -45,7 +106,7 @@ You loaded a real RNA-seq dataset from a public database into R. Data is ready f
 
 \section{Block 6: Differential Expression + ggplot2}
 
-\sprint{4}{DESeq2: The Gold Standard DE Analysis}{50}
+\sprint{6}{DESeq2: The Gold Standard DE Analysis}{50}
 \begin{itemize}[nosep]
   \item Build a DESeqDataSet from your SummarizedExperiment + a design formula (\texttt{\textasciitilde condition})
   \item Run: \texttt{dds <- DESeq(dds); res <- results(dds)} --- the entire analysis in two lines
@@ -57,7 +118,7 @@ You loaded a real RNA-seq dataset from a public database into R. Data is ready f
 You ran a full differential expression analysis on real data. This is publishable work.
 \end{winbox}
 
-\sprint{5}{ggplot2: Grammar of Graphics}{25}
+\sprint{7}{ggplot2: Grammar of Graphics}{25}
 \begin{itemize}[nosep]
   \item The formula: \texttt{ggplot(data, aes(x, y)) + geom\_point() + theme\_minimal()}
   \item Layers: \texttt{+ geom\_violin() + geom\_boxplot(width=0.1)} --- combine geoms for rich plots
@@ -68,7 +129,7 @@ You ran a full differential expression analysis on real data. This is publishabl
 You created a multi-panel publication figure. This goes in your portfolio.
 \end{winbox}
 
-\sprint{6}{Compare DE Methods (Interleaving!)}{25}
+\sprint{8}{Compare DE Methods (Interleaving!)}{25}
 \begin{itemize}[nosep]
   \item Run the same dataset through limma-voom: \texttt{voom(counts) + lmFit + eBayes + topTable}
   \item Compare results: how many genes are significant in DESeq2 but not limma? Vice versa?
