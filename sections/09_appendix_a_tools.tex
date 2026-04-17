@@ -1,6 +1,6 @@
-\chapter{Appendix A: Tools \& Installation}
+\chapter{Appendix A: Tools \& Installation}\label{app:tools}
 
-Every non-default tool referenced in this curriculum, with install commands and official documentation. Most bioinformatics software is installed into a conda environment (see Block 2, Sprint 6); a handful of core tools sit outside conda and should be installed first.
+Every non-default tool referenced in this curriculum, with install commands and official documentation. Most bioinformatics software is installed into a conda environment (see \hyperref[chap:unix]{Block 2, Sprint 6}); a handful of core tools sit outside conda and should be installed first.
 
 
 \section{Core infrastructure (install once, before anything else)}
@@ -23,7 +23,7 @@ Every non-default tool referenced in this curriculum, with install commands and 
   \item \texttt{tree} (directory visualization) --- macOS: \texttt{brew install tree}. Debian/Ubuntu: \texttt{sudo apt install tree}. Fedora/RHEL: \texttt{sudo dnf install tree}.
   \item \texttt{tmux} (persistent terminal sessions, critical on HPC) --- macOS: \texttt{brew install tmux}. Linux: \texttt{sudo apt install tmux} or \texttt{sudo dnf install tmux}. Docs: \url{https://github.com/tmux/tmux/wiki}.
   \item \texttt{jq} (JSON filtering on the command line) --- macOS: \texttt{brew install jq}. Linux: \texttt{sudo apt install jq}. Docs: \url{https://jqlang.github.io/jq/}.
-  \item \texttt{bc} (arbitrary-precision calculator; used in Block 1 Sprint 4) --- usually default on macOS. On minimal Linux images: \texttt{sudo apt install bc}.
+  \item \texttt{bc} (arbitrary-precision calculator; used in \hyperref[chap:unix]{Block 1 Sprint 4}) --- usually default on macOS. On minimal Linux images: \texttt{sudo apt install bc}.
   \item \texttt{parallel} (GNU parallel, for command-line job parallelism) --- macOS: \texttt{brew install parallel}. Linux: \texttt{sudo apt install parallel}.
   \item \texttt{curl} / \texttt{wget} --- both default on macOS and most Linux distros; \texttt{sudo apt install curl wget} if either is missing.
 \end{itemize}
