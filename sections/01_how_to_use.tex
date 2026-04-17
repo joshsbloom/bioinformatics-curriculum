@@ -1,26 +1,26 @@
 \chapter{How This Curriculum Works (Read This First)}
 
 \begin{brainbox}[Built for how learning actually works]
-Traditional curricula front-load reading and back-load doing. This one flips that: every session is hands-on first, theory second.
+Traditional curricula front-load reading and back-load doing. This one inverts that order: every session is hands-on first, theory second.
 
-Every session produces something tangible. You never just ``read about'' a topic --- you DO it, see output, and move on.
+Each session produces something tangible. You run a command, read the output, then read about why it behaves that way.
 
-It's okay to jump around. Each sprint is self-contained enough that you can follow your curiosity without losing the thread.
+Jumping around is fine. Each sprint is self-contained enough that you can follow your curiosity without losing the thread.
 \end{brainbox}
 
 
 \section{The Three Rules}
 
-\textbf{\color{teal}Rule 1: The 25-Minute Sprint.} Every study session is broken into 25-minute sprints (Pomodoro). Each sprint has ONE clear goal and ONE tangible output. If you finish early, take the break early. If you're in flow, keep going --- but never force yourself past 50 minutes without a break.
+\textbf{\color{teal}Rule 1: The 25-Minute Sprint.} Every study session is broken into 25-minute sprints (Pomodoro). Each sprint has one clear goal and one tangible output. If you finish early, take the break early. If you are in flow, keep going, but never push past 50 minutes without a break.
 
-\textbf{\color{teal}Rule 2: Output Before Input.} Always DO something before you READ about it. Try the command first. Break something. Then read why it broke. You'll remember mistakes and fixes much better than anything you passively read.
+\textbf{\color{teal}Rule 2: Output Before Input.} Do something before you read about it. Try the command first. Break something. Then read why it broke. You will remember mistakes and fixes much better than anything you passively read.
 
 \textbf{\color{teal}Rule 3: The Checkpoint.} Every sprint ends with a concrete thing you made, produced, or proved works. Screenshot it, commit it, or write one sentence in your journal. This is your proof of progress.
 
 
 \section{How a Block Works}
 
-The curriculum is divided into 12 \textbf{blocks}. Each block is roughly 2 hours of focused work, organized as a small batch of 25-minute sprints with short breaks between them. Most blocks land around 3--5 sprints --- check the chapter for the exact count. How you spread a block across the calendar is up to you: one 2-hour sitting, two 60-minute sittings, or a sprint a day all work. What matters is that you finish the block's sprints before moving on.
+The curriculum is divided into 12 \textbf{blocks}. Each block is roughly 2 hours of focused work, organized as a small batch of 25-minute sprints with short breaks between them. Most blocks land around 3--5 sprints; check the chapter for the exact count. How you spread a block across the calendar is up to you: one 2-hour sitting, two 60-minute sittings, or a sprint a day all work. What matters is that you finish the block's sprints before moving on.
 
 \begin{center}
 \begin{tabularx}{\textwidth}{l X}
@@ -29,7 +29,7 @@ The curriculum is divided into 12 \textbf{blocks}. Each block is roughly 2 hours
 \midrule
 Sprint (25 min) & Hands-on: work through the sprint's goal and produce its checkpoint \\
 Break (5 min) & Stand up, walk, look away from the screen \\
-Next sprint & Continue --- or stop here and pick up another day \\
+Next sprint & Continue, or stop here and pick up another day \\
 End of block & Journal one sentence per sprint. Commit to Git. \\
 \bottomrule
 \end{tabularx}
@@ -40,7 +40,11 @@ End of block & Journal one sentence per sprint. Commit to Git. \\
 
 \section{Your Toolkit (Set Up in Block 0)}
 
-Before Block 1, spend one sitting setting this up. This is Sprint 0. \textbf{\hyperref[app:tools]{Appendix~A} is your complete install reference} --- every tool named in this curriculum (core infrastructure, command-line utilities, bioinformatics packages, R and Python libraries) is listed there with macOS and Linux install commands and official documentation links. Keep it open while you work through the curriculum. For a fast lookup of programming concepts (loops, pipes, recursion, regex, git verbs), see \hyperref[app:concepts]{Appendix~B}; for a curated reading list and a one-page block-by-block overview, see \hyperref[app:reading]{Appendix~C}.
+Before Block 1, spend one sitting setting this up. This is Sprint 0. \textbf{\hyperref[app:tools]{Appendix~A} is the complete install reference.} Every tool named in this curriculum (core infrastructure, command-line utilities, bioinformatics packages, R and Python libraries) is listed there with macOS and Linux install commands and official documentation links. Keep it open while you work through the curriculum. For a fast lookup of programming concepts (loops, pipes, recursion, regex, git verbs), see \hyperref[app:concepts]{Appendix~B}; for a curated reading list and a block-by-block overview, see \hyperref[app:reading]{Appendix~C}.
+
+\begin{tipbox}[If you are brand new to the terminal]
+On macOS, open \texttt{Terminal.app} (Cmd-Space, type ``terminal''). On Linux, any terminal emulator works (GNOME Terminal, Konsole, xterm). On Windows, install WSL2 first (\url{https://learn.microsoft.com/windows/wsl/install}) and do everything inside the Ubuntu shell it gives you --- the rest of this curriculum assumes a Unix-like shell. The \texttt{\$} symbol at the start of a command is the shell prompt; do not type it.
+\end{tipbox}
 
 \begin{center}
 \begin{tabularx}{\textwidth}{l l X}
@@ -58,7 +62,7 @@ A journal.md file & One sentence per day = progress proof & Create it in your Gi
 \end{center}
 
 \begin{winbox}[Sprint 0 Checkpoint]
-Install everything. Open your terminal. Create a Git repo called \texttt{bioinfo-journey} with a \texttt{journal.md} file. Push it to GitHub.
+Install everything. Open your terminal. Create a local Git repo called \texttt{bioinfo-journey} with a \texttt{journal.md} file inside it. You will push this repo to GitHub in \hyperref[chap:unix]{Block 2, Sprint 8} once you have an SSH key set up; for now, just initialize it locally with \texttt{git init} and make your first commit.
 \end{winbox}
 
 
@@ -67,24 +71,24 @@ Install everything. Open your terminal. Create a Git repo called \texttt{bioinfo
 \begin{brainbox}[Why not just learn Unix, then Python, then R in order?]
 Research consistently shows that retention improves when topics are interleaved (mixed) rather than massed (all-Unix-then-all-Python).
 
-Each block below has a PRIMARY focus, but deliberately connects to other skills. By Block 4 you're already using Python + Unix + statistics together.
+Each block below has a primary focus, but deliberately connects to other skills. By Block 4 you are already using Python, Unix, and statistics together.
 
-If you get stuck on one topic, switch to a different sprint in the same block. Coming back later with fresh eyes is not quitting --- it's how interleaving works.
+If you get stuck on one topic, switch to a different sprint in the same block. Coming back later with fresh eyes is not quitting; it is how interleaving works.
 \end{brainbox}
 
 
 \section{How to Use AI as Your Study Partner}
 
-AI tools are effective study aids --- treat them as a resource you can query at any time for explanations, debugging, and code review.
+AI tools are effective study aids. Treat them as a resource you can query any time for explanations, debugging, and code review.
 
 \begin{itemize}[nosep]
-  \item \textbf{Stuck on an error?} Paste the FULL error message into Claude. Don't describe it --- paste it.
-  \item \textbf{Confused by a concept?} Ask: ``Explain [concept] like I already know [thing I do know] but not [thing I don't].''
+  \item \textbf{Stuck on an error?} Paste the full error message into Claude or ChatGPT. Do not describe it; paste it.
+  \item \textbf{Confused by a concept?} Ask: ``Explain [concept] assuming I already know [thing I do know] but not [thing I don't].''
   \item \textbf{Want to check understanding?} Ask: ``I think [my understanding]. Is that right? What am I missing?''
   \item \textbf{Need a break from reading?} Ask: ``Give me a 5-minute hands-on exercise to practice [concept].''
-  \item \textbf{Feeling overwhelmed?} Ask: ``What's the ONE most important thing I should understand about [topic]?''
+  \item \textbf{Feeling overwhelmed?} Ask: ``What is the single most important thing I should understand about [topic]?''
 \end{itemize}
 
 \begin{warnbox}[The one rule about AI]
-Always run AI-generated code before trusting it. AI hallucinates function names, invents packages, and confuses API versions. Test first, trust after.
+Always run AI-generated code before trusting it. AI tools hallucinate function names, invent packages, and mix up API versions. Test first, trust after.
 \end{warnbox}

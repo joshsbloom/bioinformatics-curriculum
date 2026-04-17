@@ -3,7 +3,7 @@
 \textbf{Primary:} Bioconductor, differential expression, ggplot2\quad|\quad\textbf{Interleave:} Statistics concepts, Unix file prep
 
 \begin{brainbox}[Why R when you just learned Python?]
-R has Bioconductor --- thousands of biology-specific packages with nothing comparable in Python. DESeq2, edgeR, GenomicRanges, Seurat all live here. You need both languages.
+R has Bioconductor, a collection of thousands of biology-specific packages with no direct Python equivalent. DESeq2, edgeR, GenomicRanges, and Seurat all live there. For working genomicists, R and Python are complements rather than substitutes.
 \end{brainbox}
 
 \begin{tipbox}[Install R and RStudio first]
@@ -13,9 +13,9 @@ R is not installed by default on macOS or most Linux distributions. Download the
 
 \section{Block 5: R Basics + Bioconductor}
 
-\sprint{1}{R in 25 Minutes --- Vectors, Lists, Data Frames}{25}
+\sprint{1}{R in 25 Minutes: Vectors, Lists, Data Frames}{25}
 \begin{itemize}[nosep]
-  \item \textbf{Vectors.} \texttt{x <- c(1, 2, 3); mean(x)}. Everything in R is a vector --- even a single number is a length-1 vector. Vectors are \textit{homogeneous}: one type throughout (numeric, character, logical).
+  \item \textbf{Vectors.} \texttt{x <- c(1, 2, 3); mean(x)}. Everything in R is a vector; even a single number is a length-1 vector. Vectors are homogeneous: one type throughout (numeric, character, or logical).
   \item \textbf{Lists.} Heterogeneous containers:
     \begin{lstlisting}
 res <- list(pval = 0.003,
@@ -24,16 +24,19 @@ res <- list(pval = 0.003,
 res$pval          # 0.003
 res[["samples"]]  # c("A", "B", "C")
     \end{lstlisting}
-    Access by name with \texttt{\$} or \texttt{[[}. Every complex R object --- \texttt{lm()} output, a \texttt{DESeqDataSet}, a phylo tree --- is a list underneath. Learn \texttt{str(obj)} now; you'll use it constantly to dig into unfamiliar objects.
+    Access elements by name with \texttt{\$} or by name/position with \texttt{[[}. Every complex R object (\texttt{lm()} output, a \texttt{DESeqDataSet}, a phylo tree) is a list underneath. Learn \texttt{str(obj)} now; you will use it constantly to inspect unfamiliar objects.
   \item \textbf{Data frames.} A list of equal-length columns with row-and-column indexing: \texttt{df <- read.csv('samples.tsv', sep='\textbackslash t')}. First three commands on any new data frame: \texttt{head(df)}, \texttt{names(df)}, \texttt{str(df)}.
-  \item \textbf{Indexing gotchas.} R is 1-based: \texttt{df[1,]} is row 1, not row 2. Negative indices \textit{exclude}: \texttt{df[-1,]} drops row 1. Logical vectors filter: \texttt{df[df\$pval < 0.05, ]}.
+  \item \textbf{Indexing gotchas.} R is 1-based: \texttt{df[1,]} is row 1, not row 2. Negative indices exclude: \texttt{df[-1,]} drops row 1. Logical vectors filter: \texttt{df[df\$pval < 0.05, ]}.
 \end{itemize}
+\begin{tipbox}[R quirks worth naming up front]
+The assignment operator is \texttt{<-} (not \texttt{=}); both work in most contexts, but \texttt{<-} is the R convention. A single \texttt{=} inside a function call assigns an argument, not a variable. \texttt{NA} means ``missing'' and \textit{propagates} through arithmetic: \texttt{mean(c(1,2,NA))} returns \texttt{NA} unless you pass \texttt{na.rm = TRUE}. Factors look like strings but behave like integers --- if a column's contents surprise you, run \texttt{class()} first.
+\end{tipbox}
 \begin{winbox}[Checkpoint]
-You loaded a TSV, inspected its structure with \texttt{str()}, pulled one column and one row, and know the difference between a vector, a list, and a data frame. Apply functions and the tidyverse come next.
+You loaded a TSV, inspected its structure with \texttt{str()}, pulled one column and one row, and can describe the difference between a vector, a list, and a data frame. Apply functions and the tidyverse come next.
 \end{winbox}
 
-\sprint{2}{Lists, the Apply Family \& Functional R}{25}
-R grew up as a functional language: instead of writing for-loops, you hand a function to another function that runs it over a collection. This pattern is everywhere in R code --- you need to read it fluently even if you'd rather write loops.
+\sprint{2}{Lists, the Apply Family, and Functional R}{25}
+R grew up as a functional language: instead of writing for-loops, you hand a function to another function that runs it over a collection. This pattern is everywhere in R code, so you need to read it fluently even if you prefer to write loops yourself.
 \begin{itemize}[nosep]
   \item \textbf{\texttt{lapply()} --- run f over a list, return a list.}
     \begin{lstlisting}
@@ -57,8 +60,8 @@ col_sds   <- apply(counts_matrix, 2, sd)
 You computed per-gene means and per-sample standard deviations on a count matrix without writing a single explicit loop. This is the R way.
 \end{winbox}
 
-\sprint{3}{Tidyverse as a Modern Layer}{25}
-Base R works, but routine data wrangling is verbose. The tidyverse is a family of packages (\texttt{dplyr}, \texttt{tidyr}, \texttt{readr}, \texttt{purrr}, \texttt{ggplot2}, \texttt{stringr}, \texttt{forcats}, \ldots) that share a consistent grammar: pipe a data frame through a sequence of \textit{verbs}, each returning a modified data frame. Once you internalize the verbs, most analyses become one-glance readable.
+\sprint{3}{Tidyverse: A Modern Layer on Top of R}{25}
+Base R works, but routine data wrangling is verbose. The tidyverse is a family of packages (\texttt{dplyr}, \texttt{tidyr}, \texttt{readr}, \texttt{purrr}, \texttt{ggplot2}, \texttt{stringr}, \texttt{forcats}, and more) that share a consistent grammar: pipe a data frame through a sequence of \textit{verbs}, each returning a modified data frame. Once you internalize the verbs, most analyses become one-glance readable.
 
 Install once with \texttt{install.packages("tidyverse")} in an R session --- that single call pulls in every package listed above. Docs: \url{https://www.tidyverse.org}.
 
@@ -88,67 +91,67 @@ Tidyverse is great for interactive analysis and scripts humans will read. Packag
 You chained five dplyr verbs to go from raw DE results to a ranked table of up/down counts per chromosome. Compare the equivalent base-R code (\texttt{aggregate}, nested \texttt{[}) --- same output, very different ergonomics.
 \end{winbox}
 
-\sprint{4}{Bioconductor: GRanges = Genomic Intervals}{25}
+\sprint{4}{Bioconductor: GRanges for Genomic Intervals}{25}
 \begin{itemize}[nosep]
-  \item Install: \texttt{BiocManager::install('GenomicRanges')}
-  \item GRanges: \texttt{gr <- GRanges(seqnames='chr1', ranges=IRanges(start=100, end=200))}
-  \item \texttt{findOverlaps(peaks, genes)} --- which peaks overlap which genes? This replaces \texttt{bedtools intersect}.
-  \item \texttt{rtracklayer::import('file.bed')} --- load BED, GFF, BigWig directly into R
+  \item Install: \texttt{BiocManager::install('GenomicRanges')}.
+  \item Create: \texttt{gr <- GRanges(seqnames = 'chr1', ranges = IRanges(start = 100, end = 200))}.
+  \item \texttt{findOverlaps(peaks, genes)} tells you which peaks overlap which genes. It is the in-R counterpart of \texttt{bedtools intersect}.
+  \item \texttt{rtracklayer::import('file.bed')} loads BED, GFF, or BigWig directly.
 \end{itemize}
 \begin{winbox}[Checkpoint]
 You performed a genomic interval overlap in R. Same concept as bedtools, different syntax.
 \end{winbox}
 
-\sprint{5}{SummarizedExperiment: The Container That Holds Everything}{25}
+\sprint{5}{SummarizedExperiment: The Standard Bioconductor Container}{25}
 \begin{itemize}[nosep]
-  \item SummarizedExperiment = counts matrix + gene info (rowData) + sample info (colData)
-  \item Every Bioconductor analysis tool expects data in this format. Learn it once, use it everywhere.
-  \item Load a real dataset: recount3 or GEOquery to pull RNA-seq data directly from public repositories
-  \item Explore: \texttt{assay(se)[1:5, 1:5]} --- the first 5 genes and 5 samples
+  \item A \texttt{SummarizedExperiment} bundles a counts matrix with gene-level metadata (\texttt{rowData}) and sample-level metadata (\texttt{colData}) in one object.
+  \item Most Bioconductor analysis tools expect data in this format. Learn it once; you will reuse it everywhere.
+  \item Load a real dataset with \texttt{recount3} (pre-aligned RNA-seq from thousands of public studies) or \texttt{GEOquery} (any GEO series).
+  \item Explore: \texttt{assay(se)[1:5, 1:5]} gives the first 5 genes across the first 5 samples.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You loaded a real RNA-seq dataset from a public database into R. Data is ready for analysis.
+You loaded a public RNA-seq dataset into R as a \texttt{SummarizedExperiment}. \texttt{dim(se)}, \texttt{colData(se)}, and \texttt{rowData(se)} all return something sensible.
 \end{winbox}
 
 
-\section{Block 6: Differential Expression + ggplot2}
+\section{Block 6: Differential Expression and ggplot2}
 
-\sprint{6}{DESeq2: The Gold Standard DE Analysis}{50}
+\sprint{6}{DESeq2: Standard RNA-seq Differential Expression}{50}
 \begin{itemize}[nosep]
-  \item Build a DESeqDataSet from your SummarizedExperiment + a design formula (\texttt{\textasciitilde condition})
-  \item Run: \texttt{dds <- DESeq(dds); res <- results(dds)} --- the entire analysis in two lines
-  \item Understand what happened: normalization (size factors), dispersion estimation (empirical Bayes shrinkage), NB GLM fitting, Wald test
-  \item Extract results: \texttt{res[order(res\$padj), ]} --- genes sorted by significance
-  \item Make a volcano plot: plot $-\log_{10}(\text{pvalue})$ vs.\ $\log_2(\text{FoldChange})$ with ggplot2
+  \item Build a \texttt{DESeqDataSet} from your \texttt{SummarizedExperiment} plus a design formula (e.g., \texttt{\textasciitilde condition}).
+  \item Run \texttt{dds <- DESeq(dds); res <- results(dds)}. Two function calls do the whole analysis.
+  \item Understand what happened under the hood: normalization (size factors), dispersion estimation with empirical Bayes shrinkage, a negative-binomial GLM fit per gene, and a Wald test for each contrast.
+  \item Extract results: \texttt{res[order(res\$padj), ]} gives genes sorted by adjusted p-value.
+  \item Make a volcano plot of $-\log_{10}(p)$ vs.\ $\log_2(\text{fold change})$ with ggplot2.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You ran a full differential expression analysis on real data. This is publishable work.
+You ran a differential expression analysis end-to-end. Sanity checks: a well-behaved dataset shows a symmetric volcano and a mostly-uniform p-value histogram away from zero.
 \end{winbox}
 
 \sprint{7}{ggplot2: Grammar of Graphics}{25}
 \begin{itemize}[nosep]
-  \item The formula: \texttt{ggplot(data, aes(x, y)) + geom\_point() + theme\_minimal()}
-  \item Layers: \texttt{+ geom\_violin() + geom\_boxplot(width=0.1)} --- combine geoms for rich plots
-  \item Facets: \texttt{+ facet\_wrap(\textasciitilde chromosome)} --- split by a variable automatically
-  \item Save: \texttt{ggsave('figure1.pdf', width=8, height=6)} --- publication-ready output
+  \item The basic form: \texttt{ggplot(data, aes(x, y)) + geom\_point() + theme\_minimal()}.
+  \item Layer more geoms: \texttt{+ geom\_violin() + geom\_boxplot(width = 0.1)}.
+  \item Facets: \texttt{+ facet\_wrap(\textasciitilde chromosome)} splits into small multiples by a variable.
+  \item Save with \texttt{ggsave('figure1.pdf', width = 8, height = 6)}.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You created a multi-panel publication figure. This goes in your portfolio.
+You produced a multi-panel figure with labeled axes, a title, and a saved PDF in your repo.
 \end{winbox}
 
-\sprint{8}{Compare DE Methods (Interleaving!)}{25}
+\sprint{8}{Compare DE Methods}{25}
 \begin{itemize}[nosep]
-  \item Run the same dataset through limma-voom: \texttt{voom(counts) + lmFit + eBayes + topTable}
-  \item Compare results: how many genes are significant in DESeq2 but not limma? Vice versa?
-  \item Make a Venn diagram or UpSet plot of the overlap --- this is how real papers compare methods
-  \item Think about why: DESeq2 and limma make different statistical assumptions. Which matter for your data?
+  \item Run the same dataset through \texttt{limma-voom}: \texttt{voom(counts)} $\to$ \texttt{lmFit} $\to$ \texttt{eBayes} $\to$ \texttt{topTable}.
+  \item Compare the result tables: how many genes are significant at FDR 0.05 in DESeq2 but not limma? Vice versa?
+  \item Visualize the overlap with a Venn diagram or UpSet plot.
+  \item Consider why they differ: DESeq2 fits a negative-binomial GLM; limma-voom transforms counts to approximately normal and fits a linear model with precision weights. Which assumption is more plausible for your data?
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You compared two statistical methods on the same data and thought critically about why results differ.
+You compared two methods on the same data, quantified the overlap, and articulated one reason the results might disagree.
 \end{winbox}
 
 \begin{restbox}[End of Blocks 5--6]
-You now have working fluency in bash, Python, and R, and can run a differential expression analysis. Take a break before moving on.
+You now have working fluency in bash, Python, and R, and can run a differential expression analysis end-to-end. Take a break before moving on.
 \end{restbox}
 
 \subsection{Checkpoint:}

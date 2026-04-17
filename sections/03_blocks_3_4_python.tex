@@ -3,13 +3,22 @@
 \textbf{Primary:} Data structures, Pandas, visualization\quad|\quad\textbf{Interleave:} Unix pipes, real genomic files
 
 \begin{brainbox}[Connection to what you already know]
-You just learned to process text files with grep and awk. Python does the same things but with more power, reusable code, and the ability to make plots and run statistics.
+You just learned to process text files with grep and awk. Python does the same things but with reusable code, richer data structures, and the ability to make plots and run statistics in the same script.
 \end{brainbox}
+
+\begin{tipbox}[Running Python: a newbie orientation]
+You need Python 3 (not 2). Check with \texttt{python3 --version}; Miniforge's \texttt{base} environment already has a recent Python 3. Two ways to run code:
+\begin{itemize}[nosep]
+  \item \textbf{REPL / notebook.} Type \texttt{python3} at the shell for a live prompt, or \texttt{jupyter lab} after \texttt{mamba install -c conda-forge jupyterlab}. Good for exploration.
+  \item \textbf{Script.} Put code in \texttt{file.py} and run \texttt{python3 file.py}. This is what the exercises below expect.
+\end{itemize}
+Indentation is syntax in Python: four spaces per level, consistent throughout a file. Mixing tabs and spaces produces \texttt{IndentationError}. Configure your editor to insert spaces when you press \texttt{Tab}.
+\end{tipbox}
 
 
 \section{Block 3: Core Python via Biology}
 
-\sprint{1}{Data Structures Are Biology}{25}
+\sprint{1}{Data Structures for Biology}{25}
 Pythonic code is less about clever tricks and more about reaching for the right built-in collection. Each has a natural biological use case.
 \begin{itemize}[nosep]
   \item \textbf{Strings = DNA sequences.}
@@ -25,32 +34,35 @@ print(comp[::-1])  # reverse complement
   \item \textbf{\texttt{collections.Counter} and \texttt{defaultdict}.} \texttt{Counter(seq).most\_common(4)} counts every character and returns the top four --- no ``does this key exist yet?'' dance. \texttt{defaultdict(list)} lets you write \texttt{d[chrom].append(pos)} without initializing each chromosome's list by hand.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You reverse-complemented DNA with \texttt{str.translate}, counted nucleotide frequencies with \texttt{Counter}, and grouped positions by chromosome with \texttt{defaultdict}. Idiomatic Python is about picking the right container, not writing loops.
+You reverse-complemented DNA with \texttt{str.translate}, counted nucleotide frequencies with \texttt{Counter}, and grouped positions by chromosome with \texttt{defaultdict}. Idiomatic Python is largely about picking the right container rather than writing loops by hand.
 \end{winbox}
 
 \sprint{2}{Parsing Genomic Files}{25}
 \begin{itemize}[nosep]
-  \item Write a FASTA parser: open the file, loop through lines, yield (header, sequence) pairs
-  \item Use a context manager (\texttt{with open(...) as f:}) --- always. This prevents resource leaks.
-  \item Parse a BED file into a list of dictionaries: \texttt{[\{chr: ..., start: ..., end: ...\}, ...]}
-  \item Handle errors: what happens when a line is malformed? Add \texttt{try/except}.
+  \item Write a FASTA parser: open the file, walk through lines, and return a list of \texttt{(header, sequence)} pairs. Remember that a sequence can span many lines between two \texttt{>} headers.
+  \item Use a context manager (\texttt{with open(path) as f:}). This closes the file automatically even if an exception is raised.
+  \item Parse a BED file into a list of dictionaries: \texttt{[\{"chrom": ..., "start": int(...), "end": int(...)\}, ...]}. BED is tab-separated and 0-based, half-open.
+  \item Handle malformed input. Wrap the parsing in \texttt{try/except ValueError} so a bad row reports a useful message and continues instead of crashing.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You can parse any text-based genomic file. This is a skill you'll use indefinitely.
+Your parser returns a list of records from a small FASTA you write by hand, and prints a warning when you deliberately introduce a malformed BED line.
 \end{winbox}
 
-\sprint{3}{Generators --- Process Files Bigger Than Your RAM}{25}
+\sprint{3}{Generators: Streaming Files Larger Than RAM}{25}
 \begin{itemize}[nosep]
-  \item A generator uses \texttt{yield} instead of \texttt{return} --- it produces items one at a time without loading everything into memory
-  \item Convert your FASTA parser to a generator. Notice: it handles a 10GB file the same way as a 10KB file.
-  \item This is critical for bioinformatics: VCFs can be billions of lines. You cannot load them into memory.
+  \item A generator function uses \texttt{yield} instead of \texttt{return}; it produces items one at a time without building the full list in memory.
+  \item Convert your FASTA parser to a generator. Usage changes from \texttt{records = parse(path)} followed by \texttt{for r in records} to a single \texttt{for r in parse(path)}. The file stays open only as long as the loop runs.
+  \item Why this matters: a whole-genome VCF or a raw FASTQ can be tens of GB. Loading all of it into memory will swap your machine or crash the job.
 \end{itemize}
+\begin{tipbox}[One detail newbies miss]
+A generator is consumed once. After \texttt{for r in parse(path): \ldots}, the generator is exhausted; running the loop again yields nothing. If you need the data twice, either call \texttt{parse(path)} again (re-opens the file) or materialize with \texttt{list(parse(path))}.
+\end{tipbox}
 \begin{winbox}[Checkpoint]
-Your FASTA parser works on any size file. That's production-quality code.
+Your FASTA parser yields one record at a time and runs on a 1~MB test file without loading all of it into memory. Verify with \texttt{import sys; sys.getsizeof(parse(path))} before and after converting.
 \end{winbox}
 
-\sprint{4}{Pythonic Idioms \& Type Hints}{25}
-Writing Python that other people (and future-you) can read quickly is less about clever tricks and more about using the idioms the language was built around. Each of these takes five minutes to learn and saves hours of debugging.
+\sprint{4}{Pythonic Idioms and Type Hints}{25}
+Writing Python that other people (and future you) can read quickly is mostly a matter of using the idioms the language was built around. Each of these takes a few minutes to learn and saves hours of debugging.
 \begin{itemize}[nosep]
   \item \textbf{f-strings.} \texttt{f"\{gene\} on chr\{chrom\} (padj=\{pval:.2e\})"} --- variables, formatting, and expressions in one readable line. Use these exclusively for user-facing strings; they're faster than \texttt{\%} or \texttt{.format()} and much harder to misread.
   \item \textbf{\texttt{pathlib} for filesystem paths.}
@@ -85,59 +97,62 @@ Before adding a dependency, check \texttt{collections}, \texttt{itertools}, \tex
 You wrote a function with a type-hinted signature, a dataclass for one biological record, and a \texttt{pathlib}-based file iteration. This is Python that will read well in a pull request.
 \end{winbox}
 
-\begin{tipbox}[The Python $\leftrightarrow$ Unix bridge]
-You already know \texttt{awk '\{print \$1\}'} extracts column 1. The Python equivalent: \texttt{line.split('\textbackslash t')[0]}. Your Unix skills transfer directly. When in doubt, prototype in awk, then scale up in Python.
+\begin{tipbox}[The Python to Unix bridge]
+You already know \texttt{awk '\{print \$1\}'} extracts column 1. The Python equivalent is \texttt{line.split('\textbackslash t')[0]}. Your Unix skills transfer directly. When in doubt, prototype in awk, then scale up in Python once the logic has more steps.
 \end{tipbox}
 
 
-\section{Block 4: Pandas, Plotting \& Bio Libraries}
+\section{Block 4: Pandas, Plotting, and Bio Libraries}
 
 \sprint{5}{Pandas for Tabular Genomic Data}{25}
 \begin{itemize}[nosep]
-  \item Load GWAS summary stats: \texttt{df = pd.read\_csv('sumstats.tsv', sep='\textbackslash t', dtype=\{'CHR': str\})}
-  \item Filter: \texttt{sig = df[df['P'] < 5e-8]} --- genome-wide significant hits
-  \item GroupBy: \texttt{df.groupby('CHR')['P'].min()} --- best p-value per chromosome
-  \item Merge: \texttt{pd.merge(genotypes, phenotypes, on='SAMPLE\_ID')} --- the most common GWAS operation
+  \item Load GWAS summary statistics: \texttt{df = pd.read\_csv('sumstats.tsv', sep='\textbackslash t', dtype=\{'CHR': str\})}. Explicit \texttt{dtype} for chromosome prevents Pandas from silently parsing ``X'' as NaN.
+  \item Filter: \texttt{sig = df[df['P'] < 5e-8]}, the genome-wide significant hits.
+  \item Group by: \texttt{df.groupby('CHR')['P'].min()}, the best p-value per chromosome.
+  \item Merge: \texttt{pd.merge(genotypes, phenotypes, on='SAMPLE\_ID')}, the most common GWAS join.
 \end{itemize}
+\begin{tipbox}[If you do not have a summary-stats file yet]
+Download one from the GWAS Catalog (\url{https://www.ebi.ac.uk/gwas/}) or the PGS Catalog (\url{https://www.pgscatalog.org}). If you just want to practice the mechanics, fabricate a minimal file with \texttt{numpy.random} and a few thousand rows; the commands above work identically.
+\end{tipbox}
 \begin{winbox}[Checkpoint]
-You loaded, filtered, and grouped real GWAS data. This replaces hours of spreadsheet work.
+You loaded, filtered, and grouped a summary-statistics table. Compare \texttt{df.shape} before and after filtering to confirm the filter did something.
 \end{winbox}
 
 \sprint{6}{Visualization}{25}
 \begin{itemize}[nosep]
-  \item Manhattan plot: scatter plot of $-\log_{10}(P)$ vs.\ genomic position, colored by chromosome
-  \item QQ plot: expected vs.\ observed $-\log_{10}(P)$ --- the standard GWAS diagnostic
-  \item Use matplotlib for control, seaborn for aesthetics. Always label axes, always include titles.
-  \item Save to file: \texttt{plt.savefig('manhattan.png', dpi=150, bbox\_inches='tight')}
+  \item Manhattan plot: scatter of $-\log_{10}(P)$ vs.\ genomic position, colored by chromosome.
+  \item QQ plot: expected vs.\ observed $-\log_{10}(P)$; the standard GWAS diagnostic for inflation.
+  \item Use matplotlib for control and seaborn for defaults. Always label axes and include a title.
+  \item Save with \texttt{plt.savefig('manhattan.png', dpi=150, bbox\_inches='tight')}.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You made a Manhattan plot from real data. Screenshot it for your portfolio.
+You produced a Manhattan plot and a QQ plot as PNGs. Commit both to your repo.
 \end{winbox}
 
-\sprint{7}{NumPy + SciPy = Fast Math}{25}
+\sprint{7}{NumPy and SciPy for Fast Math}{25}
 \begin{itemize}[nosep]
-  \item NumPy arrays: 100$\times$ faster than Python lists for math. \texttt{np.mean(quality\_scores)} instead of \texttt{sum()/len()}
-  \item Vectorized operations: never loop over millions of variants. \texttt{genotypes * 2} multiplies every element at once.
-  \item SciPy stats: \texttt{scipy.stats.ttest\_ind(group1, group2)} for quick hypothesis tests
-  \item Multiple testing: \texttt{from statsmodels.stats.multitest import multipletests} --- you'll need this for any -omics analysis
+  \item NumPy arrays are typically two orders of magnitude faster than Python lists for numeric math. Use \texttt{np.mean(quality\_scores)} rather than \texttt{sum(xs)/len(xs)}.
+  \item Vectorized operations avoid explicit loops: \texttt{genotypes * 2} multiplies every element at once.
+  \item SciPy provides standard hypothesis tests: \texttt{scipy.stats.ttest\_ind(group1, group2)}.
+  \item Multiple testing correction: \texttt{from statsmodels.stats.multitest import multipletests}.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You ran a statistical test on biological data in Python. No GUI, no spreadsheets --- just code.
+You ran a t-test in Python, then applied Benjamini--Hochberg correction to a vector of p-values and compared the number of significant hits before and after.
 \end{winbox}
 
 \sprint{8}{Bio Libraries: pysam, Biopython, scanpy}{25}
 \begin{itemize}[nosep]
-  \item pysam: read BAM files programmatically. Count reads mapping to a gene in 3 lines.
-  \item Biopython: \texttt{SeqIO.parse()} handles FASTA, FASTQ, GenBank. \texttt{Entrez.efetch()} queries NCBI.
-  \item scanpy: the single-cell analysis framework. We'll use it heavily in Blocks 9--10.
-  \item scikit-allel: population genetics in Python --- allele frequencies, LD, PCA from VCF data
+  \item pysam: read BAM/CRAM files directly. Count reads mapping to a gene interval in a few lines.
+  \item Biopython: \texttt{SeqIO.parse()} handles FASTA, FASTQ, and GenBank; \texttt{Entrez.efetch()} queries NCBI.
+  \item scanpy: the single-cell analysis framework used heavily in Blocks 9--10.
+  \item scikit-allel: population genetics in Python (allele frequencies, LD, PCA from VCF data).
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You queried NCBI from Python and read a BAM file programmatically. You're automating research.
+You queried NCBI from Python (e.g., retrieved a GenBank record by accession) and counted reads in a BAM file for one interval.
 \end{winbox}
 
 \begin{restbox}[End of Blocks 3--4]
-You just absorbed a new language AND applied it to biology. Take some time off. Let it consolidate.
+You just picked up a new language and applied it to biology. Take a day off. Let it consolidate.
 \end{restbox}
 
 \subsection{Checkpoint:}

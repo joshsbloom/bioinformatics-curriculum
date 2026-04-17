@@ -2,27 +2,31 @@
 
 \textbf{Primary:} scRNA-seq pipeline, GWAS pipeline\quad|\quad\textbf{Interleave:} All previous skills converge here
 
-\begin{brainbox}[This is the payoff]
-Everything you learned --- Unix, Python, R, statistics --- comes together in these two blocks. You'll run complete real-world analyses from raw data to biological insight.
+\begin{brainbox}[Where it all comes together]
+Unix, Python, R, and statistics all appear in these two blocks. You will run complete analyses from raw data to biological interpretation.
 \end{brainbox}
 
 
-\section{Block 9: Single-Cell RNA-seq --- Start to Finish}
+\section{Block 9: Single-Cell RNA-seq, Start to Finish}
 
-\sprint{1}{Technology + Data Orientation}{25}
+\sprint{1}{Technology and Data Orientation}{25}
 \begin{itemize}[nosep]
-  \item 10x Chromium captures RNA from individual cells $\to$ UMI count matrix (genes $\times$ cells).
-  \item Download a public PBMC dataset from the 10x Genomics website (\url{https://www.10xgenomics.com/datasets}); a pre-processed h5ad is fine to start.
-  \item Install scanpy if you haven't: \texttt{mamba install -c conda-forge -c bioconda scanpy}. Docs: \url{https://scanpy.readthedocs.io/}. Load: \texttt{adata = sc.read\_h5ad('pbmc.h5ad')}.
-  \item Explore: \texttt{adata.shape}, \texttt{adata.obs.head()}, \texttt{adata.var.head()}
-  \item Think: what does each row represent? Each column? What are the expected ranges for counts?
+  \item 10x Chromium captures RNA from individual cells, producing a UMI count matrix with cells as rows and genes as columns in \texttt{AnnData}.
+  \item Download a public PBMC dataset from the 10x Genomics website (\url{https://www.10xgenomics.com/datasets}); a pre-processed \texttt{.h5ad} is fine to start.
+  \item Install scanpy if needed: \texttt{mamba install -c conda-forge -c bioconda scanpy}. Docs: \url{https://scanpy.readthedocs.io/}. Load with \texttt{adata = sc.read\_h5ad('pbmc.h5ad')}.
+  \item Explore: \texttt{adata.shape}, \texttt{adata.obs.head()}, \texttt{adata.var.head()}.
+  \item Answer in your journal: what does each row of \texttt{adata} represent? Each column? What is a plausible range for per-cell total counts and for number of expressed genes? (For a healthy PBMC droplet library, 500--10{,}000 genes and 1{,}000--50{,}000 UMIs per cell are common.)
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You have real single-cell data loaded and you understand its structure.
+You loaded a real single-cell dataset and can describe its dimensions and what each axis means.
 \end{winbox}
 
-\sprint{2}{QC --- Find and Remove the Junk}{25}
+\sprint{2}{Quality Control: Filtering Cells and Doublets}{25}
 \begin{itemize}[nosep]
+  \item Flag mitochondrial genes so they can be counted:
+    \begin{lstlisting}
+adata.var['mt'] = adata.var_names.str.startswith('MT-')
+    \end{lstlisting}
   \item Calculate QC metrics:
     \begin{lstlisting}
 sc.pp.calculate_qc_metrics(adata, qc_vars=['mt'])
@@ -31,13 +35,15 @@ sc.pp.calculate_qc_metrics(adata, qc_vars=['mt'])
   \item Plot distributions:
     \begin{lstlisting}
 sc.pl.violin(adata,
-  ['n_genes_by_counts', 'total_counts', 'pct_counts_mt'])
+  ['n_genes_by_counts',
+   'total_counts',
+   'pct_counts_mt'])
     \end{lstlisting}
-  \item Filter: keep cells with 200--5000 genes and $<$20\% mito. These thresholds have biological reasons.
-  \item Doublet detection with Scrublet: \texttt{sc.pp.scrublet(adata)} or \texttt{sc.external.pp.scrublet(adata)} depending on scanpy version
+  \item Filter: keep cells with roughly 200--5000 detected genes and fewer than 20\% mitochondrial reads. The biological rationale: very few genes suggests empty droplets or dying cells; very many suggests doublets; high mitochondrial fraction suggests cells whose membranes have leaked cytoplasmic RNA.
+  \item Doublet detection with Scrublet: \texttt{sc.pp.scrublet(adata)} (or \texttt{sc.external.pp.scrublet(adata)} on older scanpy versions).
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You filtered out low-quality cells and doublets. The data is now clean.
+You filtered out low-quality cells and doublets. Record cell counts before and after in \texttt{journal.md}. A typical PBMC dataset loses 10--30\% of droplets.
 \end{winbox}
 
 \sprint{3}{Normalize $\to$ HVGs $\to$ PCA $\to$ UMAP $\to$ Cluster}{25}
@@ -54,22 +60,22 @@ sc.tl.leiden(adata, resolution=0.5)
   \item \texttt{sc.pl.umap(adata, color=['leiden'])} --- a single-cell cluster plot from raw data
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You went from raw counts to clustered UMAP in 6 lines of code.
+You went from filtered counts to a clustered UMAP plot with six scanpy calls. Save the plot to your repo.
 \end{winbox}
 
-\sprint{4}{Annotate Cell Types + Differential Expression}{25}
+\sprint{4}{Annotate Cell Types and Pseudobulk DE}{25}
 \begin{itemize}[nosep]
-  \item Plot known markers: \texttt{sc.pl.dotplot(adata, ['CD3D', 'CD14', 'MS4A1', 'NKG7'], groupby='leiden')}
-  \item Assign labels:
+  \item Plot canonical markers: \texttt{sc.pl.dotplot(adata, ['CD3D', 'CD14', 'MS4A1', 'NKG7'], groupby='leiden')}. For PBMCs: \texttt{CD3D} marks T cells, \texttt{CD14} monocytes, \texttt{MS4A1} B cells, \texttt{NKG7} NK/cytotoxic cells.
+  \item Assign labels based on which clusters light up for which markers:
     \begin{lstlisting}
 adata.obs['cell_type'] = adata.obs['leiden'].map(
-  {0: 'CD4 T', 1: 'Monocytes', ...})
+  {'0': 'CD4 T', '1': 'Monocytes', ...})
     \end{lstlisting}
-  \item Pseudobulk DE (the right way): aggregate counts per donor$\times$cell\_type, then use DESeq2 in R
-  \item Why pseudobulk? Cell-level tests inflate p-values because cells from the same donor aren't independent.
+  \item For differential expression across conditions, use pseudobulk: aggregate UMI counts per (donor, cell\_type) pair and feed the resulting count matrix to DESeq2 or edgeR in R.
+  \item Why pseudobulk? Cell-level tests treat every cell as an independent observation, but cells from the same donor share many sources of variation. Pseudobulk respects the actual unit of replication (the donor) and produces calibrated p-values.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You annotated cell types using marker genes and understand why pseudobulk DE matters. This is current best practice.
+You annotated cell types from marker expression, ran a pseudobulk DE test, and can state in one sentence why pseudobulk gives more honest p-values than per-cell testing.
 \end{winbox}
 
 \begin{tipbox}[Multi-modal extensions (for your journal)]
@@ -82,39 +88,39 @@ You annotated cell types using marker genes and understand why pseudobulk DE mat
 \end{tipbox}
 
 
-\section{Block 10: GWAS Pipeline --- Variant to Function}
+\section{Block 10: GWAS Pipeline, Variant to Function}
 
 \sprint{5}{Genotype QC with PLINK2}{25}
 \begin{itemize}[nosep]
-  \item PLINK2 is the workhorse. Install via bioconda (\texttt{mamba install -c bioconda plink2}) or download a pre-built binary from \url{https://www.cog-genomics.org/plink/2.0/}. Get a small dataset (HapMap or 1KG subset in PLINK format).
-  \item Sample QC: \texttt{--mind} (call rate), \texttt{--het} (heterozygosity), \texttt{--check-sex}, \texttt{--king-cutoff} (relatedness)
-  \item Variant QC: \texttt{--geno} (call rate), \texttt{--hwe} (Hardy--Weinberg), \texttt{--maf} (minor allele frequency)
-  \item PCA: \texttt{plink2 --pca 10} --- compute population structure. Plot PC1 vs PC2.
+  \item PLINK2 is the workhorse. Install via bioconda (\texttt{mamba install -c bioconda plink2}) or download a pre-built binary from \url{https://www.cog-genomics.org/plink/2.0/}. Get a small dataset, e.g., a HapMap or 1000 Genomes subset in PLINK format.
+  \item Sample QC flags: \texttt{--mind} (per-sample call rate), \texttt{--het} (heterozygosity), \texttt{--check-sex}, \texttt{--king-cutoff} (relatedness).
+  \item Variant QC flags: \texttt{--geno} (per-variant call rate), \texttt{--hwe} (Hardy--Weinberg equilibrium), \texttt{--maf} (minor allele frequency threshold).
+  \item PCA: \texttt{plink2 --pca 10} computes the top 10 principal components. Plot PC1 vs.\ PC2.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You QC'd a genotype dataset. Every GWAS starts here.
+You QC'd a genotype dataset and can report how many samples and variants were dropped by each filter. Every GWAS starts here.
 \end{winbox}
 
 \sprint{6}{Association Testing}{25}
 \begin{itemize}[nosep]
-  \item Simulate a phenotype correlated with genotype (so you know the true answer)
-  \item Run: \texttt{plink2 --glm ...} --- this fits a linear (or logistic) model at every variant
-  \item For real data: use REGENIE or BOLT-LMM (mixed models that handle population structure and relatedness)
-  \item Make a Manhattan plot and QQ plot from the results. Check $\lambda_\text{GC}$ for inflation.
+  \item Simulate a phenotype correlated with a chosen causal variant so you know the true answer and can check your pipeline recovers it.
+  \item Run \texttt{plink2 --glm} to fit a linear (quantitative) or logistic (case/control) model at every variant.
+  \item For real human data, use REGENIE or BOLT-LMM (mixed models that handle population structure and relatedness simultaneously).
+  \item Make a Manhattan plot and a QQ plot of the results, and check the genomic inflation factor $\lambda_\text{GC}$. Values near 1.00 are healthy; values above 1.1--1.2 suggest uncontrolled structure or miscalibration.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You ran a GWAS and made the diagnostic plots. You can tell if results are inflated or clean.
+You ran a GWAS on simulated data and recovered the known causal variant as the top hit. Your QQ plot and $\lambda_\text{GC}$ indicate a calibrated test.
 \end{winbox}
 
 \sprint{7}{Post-GWAS: Heritability, Fine-Mapping, Interpretation}{25}
 \begin{itemize}[nosep]
-  \item LDSC (\url{https://github.com/bulik/ldsc}): estimate SNP-heritability from summary statistics. How much of the trait is explained by common variants? Install via conda with a Python 2.7 env or follow the repo instructions.
-  \item Fine-mapping: the SuSiE R package (\url{https://stephenslab.github.io/susieR/}) gives you 95\% credible sets --- the smallest set of variants likely to contain the causal one. \texttt{install.packages("susieR")}.
-  \item Colocalization: the \texttt{coloc} R package (\texttt{install.packages("coloc")}, \url{https://chr1swallace.github.io/coloc/}) asks whether your GWAS signal shares a causal variant with a nearby eQTL.
-  \item PRS (polygenic risk scores): aggregate small effects across the genome into a single predictor
+  \item LDSC (\url{https://github.com/bulik/ldsc}) estimates SNP-heritability from summary statistics: what fraction of phenotypic variance is explained by the common-variant tagging set? Install via conda; follow the repo's instructions for its Python-2 dependency, or use the Python-3 fork \texttt{ldsc-py3}.
+  \item Fine-mapping: the SuSiE R package (\url{https://stephenslab.github.io/susieR/}) reports 95\% credible sets, the smallest sets of variants likely to contain the causal one in each signal. \texttt{install.packages("susieR")}.
+  \item Colocalization: the \texttt{coloc} R package (\texttt{install.packages("coloc")}, \url{https://chr1swallace.github.io/coloc/}) tests whether your GWAS signal shares a causal variant with a nearby eQTL.
+  \item Polygenic risk scores (PRS) aggregate small effects across the genome into a single per-sample predictor, typically by weighted sum of effect alleles.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You traced a GWAS signal from association to potential causal variant to gene.
+For one locus in your GWAS, you reported a heritability estimate for the trait, a fine-mapped credible set, and a colocalization posterior with an eQTL (or a clear ``no colocalization'').
 \end{winbox}
 
 \begin{restbox}[End of Blocks 9--10]

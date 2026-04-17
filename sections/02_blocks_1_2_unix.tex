@@ -3,67 +3,82 @@
 \textbf{Primary:} Command line, text processing, bash scripting\quad|\quad\textbf{Interleave:} Git, project setup
 
 \begin{brainbox}[Why this matters]
-Every bioinformatics pipeline runs on Unix. Genomic data is text. If you can wrangle text in a terminal, you can wrangle genomes.
+Most bioinformatics pipelines run on Unix, and most genomic file formats are plain text. If you can wrangle text in a terminal, you can wrangle genomes.
 \end{brainbox}
 
 \begin{tipbox}[Need to install something?]
-Every non-default tool named anywhere in this curriculum has install commands (macOS and Linux) and an official link in \textbf{\hyperref[app:tools]{Appendix~A}}. Flip to it the moment you hit a command that isn't on your machine --- don't guess.
+Every non-default tool named anywhere in this curriculum has install commands (macOS and Linux) and an official link in \textbf{\hyperref[app:tools]{Appendix~A}}. Flip to it the moment you hit a command that is not on your machine. Do not guess.
 \end{tipbox}
 
 
 \section{Block 1: The Command Line}
 
-\sprint{1}{Navigate \& Look Around}{25}
+\sprint{1}{Navigate and Look Around}{25}
 \begin{itemize}[nosep]
-  \item Open your terminal. Run: \texttt{pwd}, \texttt{ls}, \texttt{ls -la}, \texttt{cd \textasciitilde}, \texttt{cd /}, \texttt{cd -}, \texttt{tree} (install with conda if needed)
-  \item Make a project directory: \texttt{mkdir -p \textasciitilde/bioinfo/block1/\{data,scripts,results\}}
-  \item Explore: what's in \texttt{/usr/bin}? How many files? (\texttt{ls /usr/bin | wc -l})
+  \item Open your terminal. Run each command and read its output before moving on: \texttt{pwd} (print working directory), \texttt{ls} (list), \texttt{ls -la} (long format, including hidden files), \texttt{cd \textasciitilde} (go home), \texttt{cd /} (go to filesystem root), \texttt{cd -} (go to previous directory).
+  \item Install \texttt{tree} if \texttt{tree --version} fails (\hyperref[app:tools]{Appendix~A}), then run \texttt{tree \textasciitilde} with no arguments.
+  \item Make a project directory: \texttt{mkdir -p \textasciitilde/bioinfo/block1/\{data,scripts,results\}}. The curly braces are a \textit{shell brace expansion} --- the shell rewrites this into three \texttt{mkdir -p} arguments before running the command.
+  \item Explore: what is in \texttt{/usr/bin}? How many entries? (\texttt{ls /usr/bin | wc -l})
 \end{itemize}
+\begin{tipbox}[Getting unstuck at the shell]
+\texttt{Tab} completes filenames and commands. \texttt{Up-arrow} brings back the previous command. \texttt{Ctrl-C} cancels whatever is running. \texttt{Ctrl-L} (or \texttt{clear}) clears the screen. \texttt{man ls} opens the manual for a command; press \texttt{q} to quit. If you ever see a stray \texttt{>} prompt you did not expect, you left an open quote; press \texttt{Ctrl-C} and start over.
+\end{tipbox}
 \begin{winbox}[Checkpoint]
-Screenshot your project directory tree. Paste it in journal.md.
+Run \texttt{tree \textasciitilde/bioinfo} and paste its output into \texttt{journal.md} --- you should see the three empty subdirectories you just made.
 \end{winbox}
 
-\sprint{2}{Pipes --- The Unix Superpower}{25}
+\sprint{2}{Pipes: Chaining Small Tools}{25}
 \begin{itemize}[nosep]
-  \item The pipe (\texttt{|}) sends output from one command into another. This is the entire Unix philosophy.
-  \item Try: \texttt{echo 'ATGCGATCGATCG' | grep -o . | sort | uniq -c | sort -rn} --- count nucleotide frequencies in one line
-  \item Download a small FASTA file:
+  \item The pipe character \texttt{|} sends the standard output of one command into the standard input of the next. This is the core of the ``small tools, composed'' Unix design.
+  \item Try: \texttt{echo 'ATGCGATCGATCG' | grep -o . | sort | uniq -c | sort -rn}. Read it left to right: print the string, split into one character per line, sort the lines, count adjacent duplicates, sort by count descending. You should see A, C, G, T each with a count.
+  \item Download the S288C yeast reference genome (tarball is $\sim$4~MB):
     \begin{lstlisting}
-curl -O https://downloads.yeastgenome.org/sequence/
-  S288C_reference/genome_releases/
-  S288C_reference_genome_Current_Release.tgz
+curl -O https://downloads.yeastgenome.org/sequence/S288C_reference/genome_releases/S288C_reference_genome_Current_Release.tgz
 tar xzf S288C_reference_genome_Current_Release.tgz
+cd S288C_reference_genome_*
     \end{lstlisting}
-  \item Explore it: \texttt{grep '>' *.fsa | head} --- what are these header lines telling you?
+  \item Find the genome FASTA: \texttt{ls *.fsa}. Look at the header lines with \texttt{grep '>' *.fsa | head}. Each header line starts with \texttt{>} and names one chromosome (I through XVI) plus the mitochondrial genome --- that is what \texttt{grep '>'} pulls out.
 \end{itemize}
+\begin{tipbox}[If \texttt{curl} fails or the URL has changed]
+Try \texttt{wget} instead of \texttt{curl -O}, or open \url{https://www.yeastgenome.org/} and navigate to Sequence $\to$ Download. A long error with ``Could not resolve host'' usually means no network; ``404 Not Found'' means the file moved.
+\end{tipbox}
 \begin{winbox}[Checkpoint]
-You piped three commands together and saw structured output.
+You chained four commands with pipes and counted nucleotide frequencies. You also inspected a real genome FASTA and identified what each header line names.
 \end{winbox}
 
-\sprint{3}{grep + awk = Data Surgery}{25}
+\sprint{3}{Grep and Awk: Extracting Lines and Columns}{25}
 \begin{itemize}[nosep]
-  \item \texttt{grep}: searches for patterns. \texttt{grep -c '>' file.fasta} counts sequences. \texttt{grep -v} inverts (excludes matches).
-  \item \texttt{awk}: extracts and transforms columns. \texttt{awk -F'\textbackslash t' '\{print \$1, \$2, \$5\}'} pulls chr, pos, and qual from a VCF.
-  \item Grab a small VCF to practice on. Yeast works well --- a whole-organism variant file that's only a few MB:
+  \item \texttt{grep} searches for patterns. \texttt{grep -c '>' file.fasta} counts sequences; \texttt{grep -v} inverts the match (keeps lines that do \textit{not} match).
+  \item \texttt{awk} extracts and transforms whitespace- or tab-separated columns. \texttt{awk -F'\textbackslash t' '\{print \$1, \$2, \$5\}' file.vcf} prints columns 1, 2, and 5 of a tab-delimited file --- for a VCF those are chromosome, position, and quality.
+  \item Download a small yeast VCF to practice on:
     \begin{lstlisting}
-curl -O https://ftp.ensembl.org/pub/
-  current_variation/vcf/saccharomyces_cerevisiae/
-  saccharomyces_cerevisiae.vcf.gz
+curl -O https://ftp.ensembl.org/pub/current_variation/vcf/saccharomyces_cerevisiae/saccharomyces_cerevisiae.vcf.gz
 gunzip saccharomyces_cerevisiae.vcf.gz
     \end{lstlisting}
-    If that link has moved, browse \texttt{https://ftp.ensembl.org/pub/current\_variation/vcf/} and pick any small organism's VCF. Other good ``small VCF'' sources: the bcftools test data (\texttt{github.com/samtools/bcftools}, \texttt{test/} directory) or a single-chromosome 1000 Genomes file restricted to a small region with \texttt{tabix}.
-  \item Count variants per chromosome with:
+    If the link has moved, browse \url{https://ftp.ensembl.org/pub/current_variation/vcf/} and pick any small organism's VCF.
+  \item Look at the file structure: \texttt{head -n 30 saccharomyces\_cerevisiae.vcf}. Lines starting with \texttt{\#\#} are metadata; the single line starting with \texttt{\#CHROM} is the column header; all other lines are data records.
+  \item Count variants per chromosome:
     \begin{lstlisting}
-grep -v '^#' file.vcf | awk '{print $1}' | \
+grep -v '^#' saccharomyces_cerevisiae.vcf | \
+  awk '{print $1}' | \
   sort | uniq -c | sort -rn
     \end{lstlisting}
+    \texttt{grep -v '\textasciicircum\#'} drops every header line; \texttt{awk} pulls out the chromosome column; \texttt{sort | uniq -c} tallies each chromosome; the final \texttt{sort -rn} orders by count.
 \end{itemize}
+\begin{warnbox}[Splitting a long command over multiple lines]
+A backslash (\textbackslash) at the end of a line tells the shell ``continue this command on the next line.'' Two rules that catch everyone at least once:
+\begin{itemize}[nosep]
+  \item The backslash must be the \textit{very last character} on the line. A single trailing space after it and the shell treats \texttt{\textbackslash~} as the escape sequence for a space, not a line continuation.
+  \item Do not put anything (not even a \texttt{\#} comment) on the same line after the backslash.
+\end{itemize}
+A safer alternative: end the line on a pipe (\texttt{|}) or logical operator (\texttt{\&\&}, \texttt{||}) instead. The shell knows a pipeline is incomplete, so it reads the next line automatically; no backslash needed. If a paste from a PDF misbehaves, suspect a smart-quote or a stripped backslash and retype the break by hand.
+\end{warnbox}
 \begin{winbox}[Checkpoint]
-You summarized a genome's worth of variants in one line.
+Running the pipeline above produces a table with roughly 16 rows (one per yeast chromosome) with a count in front of each. Paste this table into \texttt{journal.md}.
 \end{winbox}
 
-\sprint{4}{Put It All Together --- Pick a Restriction Enzyme for Cloning}{25}
-A real scenario: you want to shotgun-clone $\sim$3\,kb fragments of the yeast genome into a plasmid. Three cheap 6-cutters are on the shelf --- EcoRI (\texttt{GAATTC}), BamHI (\texttt{GGATCC}), and HindIII (\texttt{AAGCTT}). \textit{Before} ordering anything, predict from the genome sequence how often each enzyme cuts and which one produces fragments closest to your 3\,kb target. Do it all with pipes --- no scripts yet. Paste every command and its output into \texttt{journal.md} as you go.
+\sprint{4}{Put It All Together: Pick a Restriction Enzyme for Cloning}{25}
+A real scenario: you want to shotgun-clone roughly 3~kb fragments of the yeast genome into a plasmid. Three cheap 6-cutters are on the shelf: EcoRI (\texttt{GAATTC}), BamHI (\texttt{GGATCC}), and HindIII (\texttt{AAGCTT}). Before ordering any of them, predict from the genome sequence how often each enzyme cuts, and which one produces fragments closest to your 3~kb target. Do it all with pipes; no scripts yet. Paste every command and its output into \texttt{journal.md} as you go.
 \begin{enumerate}[nosep]
   \item \textbf{Confirm and organize.} \texttt{head} the yeast FASTA --- the first line should start with \texttt{>}. Then move the FASTA (and the VCF from Sprint 3) into \texttt{data/} in one pipeline: \texttt{ls *.fsa *.vcf 2>/dev/null | xargs -I\{\} mv \{\} \textasciitilde/bioinfo/block1/data/}. Verify with \texttt{ls \textasciitilde/bioinfo/block1/data/}.
   \item \textbf{Measure the genome.} Strip headers and newlines, count characters:
@@ -78,16 +93,16 @@ grep -v '>' ~/bioinfo/block1/data/*.fsa | \
   tr -d '\n' | grep -o GAATTC | wc -l
     \end{lstlisting}
     Run it three times --- once each for \texttt{GAATTC}, \texttt{GGATCC}, \texttt{AAGCTT}. Which cuts most? Fewest?
-  \item \textbf{Why one strand is enough.} All three recognition sites are palindromes (read the same on both strands), so every real cut site is already captured by a forward-strand match. For non-palindromic motifs you'd also have to scan the reverse complement --- good to know before you generalize this approach.
-  \item \textbf{Compute average fragment size.} Fragment size $\approx$ genome length $\div$ number of cut sites. Use \texttt{bc}: \texttt{echo "12157105 / NSITES" | bc} (swap in your actual genome length and cut count). Expect numbers in the range of hundreds of bp to tens of kb.
-  \item \textbf{Pick your enzyme.} Which enzyme's average fragment size is closest to your 3\,kb target? Write one sentence in \texttt{journal.md} explaining your choice, and flag which enzyme would be a bad idea (cuts so often you'd get tiny shredded fragments, or so rarely the fragments are too big to clone).
+  \item \textbf{Why one strand is enough.} All three recognition sites are palindromes (they read the same on both strands), so every real cut site is already captured by a forward-strand match. For non-palindromic motifs you would also have to scan the reverse complement; good to know before you generalize this approach.
+  \item \textbf{Compute average fragment size.} Average fragment size $\approx$ genome length $\div$ number of cut sites. Use \texttt{bc}: \texttt{echo "12157105 / NSITES" | bc} (swap in your actual genome length and cut count). Expect numbers in the range of hundreds of bp to tens of kb.
+  \item \textbf{Pick your enzyme.} Which enzyme's average fragment size is closest to your 3~kb target? Write one sentence in \texttt{journal.md} explaining your choice, and flag which enzyme would be a bad idea (cuts so often you would get tiny fragments, or so rarely the fragments are too big to clone).
 \end{enumerate}
 \begin{winbox}[Checkpoint]
-Your journal shows the \texttt{head} check, the move-into-\texttt{data/} pipeline, the genome length, cut-site counts for three enzymes, their average fragment sizes, and your enzyme pick with a one-sentence justification --- all produced with pipes.
+Your journal shows the \texttt{head} check, the move-into-\texttt{data/} pipeline, the genome length, cut-site counts for three enzymes, their average fragment sizes, and your enzyme pick with a one-sentence justification, all produced with pipes.
 \end{winbox}
 
 \begin{tipbox}[Pattern to remember]
-In Unix bioinformatics, the workflow is almost always: EXTRACT columns (cut/awk) $\to$ FILTER rows (grep) $\to$ SORT $\to$ COUNT (uniq -c). This pattern covers 80\% of quick data exploration.
+In Unix bioinformatics, the workflow is almost always: extract columns (\texttt{cut} / \texttt{awk}) $\to$ filter rows (\texttt{grep}) $\to$ sort $\to$ count (\texttt{uniq -c}). This pattern covers a large fraction of quick data exploration.
 \end{tipbox}
 
 
@@ -95,23 +110,40 @@ In Unix bioinformatics, the workflow is almost always: EXTRACT columns (cut/awk)
 
 \sprint{5}{Your First Bash Script}{25}
 \begin{itemize}[nosep]
-  \item Create a file: \texttt{nano \textasciitilde/bioinfo/scripts/count\_variants.sh}
-  \item Add: \texttt{\#!/usr/bin/env bash}, then \texttt{set -euo pipefail} (this catches errors immediately)
-  \item Write a script that takes a VCF filename as \texttt{\$1} and outputs a per-chromosome variant count table
-  \item Make it executable: \texttt{chmod +x count\_variants.sh}, then run it
+  \item Create the file: \texttt{nano \textasciitilde/bioinfo/block1/scripts/count\_variants.sh} (or use VS Code --- any plain-text editor is fine).
+  \item The first line must be the ``shebang'' \texttt{\#!/usr/bin/env bash}, which tells the OS which interpreter to run. Follow it with \texttt{set -euo pipefail}: \texttt{-e} exits on the first error, \texttt{-u} errors on undefined variables, \texttt{-o pipefail} fails if any command in a pipeline fails.
+  \item Write a script that reads a VCF filename from its first argument (\texttt{\$1}) and prints a per-chromosome variant count. Template to fill in:
+    \begin{lstlisting}
+#!/usr/bin/env bash
+set -euo pipefail
+
+vcf="${1:?usage: count_variants.sh FILE.vcf}"
+grep -v '^#' "$vcf" | awk '{print $1}' | \
+  sort | uniq -c | sort -rn
+    \end{lstlisting}
+    The \texttt{\$\{1:?\ldots\}} syntax prints a usage message and exits if you forget to pass an argument.
+  \item Make it executable and run it: \texttt{chmod +x count\_variants.sh} then \texttt{./count\_variants.sh \textasciitilde/bioinfo/block1/data/saccharomyces\_cerevisiae.vcf}.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You have a reusable script. Run it on a different VCF. Same script, different data.
+The script prints the same per-chromosome counts you computed by hand in Sprint 3. Run it on a different VCF (same script, different data) and confirm it still works.
 \end{winbox}
 
-\sprint{6}{Conda \& Mamba: Isolated, Reproducible Environments}{25}
+\sprint{6}{Conda and Mamba: Isolated, Reproducible Environments}{25}
 \begin{itemize}[nosep]
-  \item Create an environment: \texttt{conda create -n biotools samtools bcftools bedtools fastp}
-  \item Activate it: \texttt{conda activate biotools}. Verify: \texttt{samtools --version}.
-  \item Export it: \texttt{conda env export > environment.yml} --- anyone can now recreate your setup with \texttt{conda env create -f environment.yml}.
-  \item Deactivate: \texttt{conda deactivate}. Run \texttt{samtools} again --- it's no longer available. Environments isolate dependencies from each other and from the system.
-  \item \textbf{Use mamba for speed.} \texttt{conda}'s dependency solver is slow on large environments. \texttt{mamba} is a drop-in replacement (C++ solver) that resolves the same specs in seconds. Miniforge (\url{https://github.com/conda-forge/miniforge}) ships with it; otherwise \texttt{conda install -n base -c conda-forge mamba}. Swap it in wherever you'd type \texttt{conda}: \texttt{mamba create -n biotools samtools bcftools bedtools fastp}.
+  \item Create an environment: \texttt{mamba create -n biotools -c conda-forge -c bioconda samtools bcftools bedtools fastp}. The \texttt{-c} flags set channels; put \texttt{conda-forge} before \texttt{bioconda}.
+  \item Activate it: \texttt{mamba activate biotools}. Verify: \texttt{samtools --version}.
+  \item Export it: \texttt{mamba env export > environment.yml}. Anyone can then recreate your setup with \texttt{mamba env create -f environment.yml}.
+  \item Deactivate: \texttt{mamba deactivate}. Run \texttt{samtools} again and confirm it is no longer on \texttt{PATH}. Environments isolate dependencies from each other and from the system.
+  \item \textbf{Why mamba?} Conda's own dependency solver is slow on large environments. Mamba is a drop-in replacement (written in C++) that resolves the same specifications in seconds. Miniforge (\url{https://github.com/conda-forge/miniforge}) ships with it. You can still type \texttt{conda} everywhere; \texttt{mamba} is just faster.
 \end{itemize}
+\begin{tipbox}[Common first-time conda mistakes]
+\begin{itemize}[nosep]
+  \item Forgetting \texttt{-c bioconda} when installing bioinformatics packages. You will get a \texttt{PackagesNotFoundError}.
+  \item Installing into the \texttt{base} environment. Do not: \texttt{base} is for conda itself. Always make a named environment.
+  \item Mixing \texttt{pip install} with \texttt{conda install} in the same environment without care. If you must, run \texttt{pip} last.
+  \item Forgetting to \texttt{mamba activate}. A freshly opened terminal has no environment active; your \texttt{biotools} tools will look missing.
+\end{itemize}
+\end{tipbox}
 \begin{warnbox}[Cross-architecture caveats]
 Conda packages are built per (OS, CPU) pair --- \texttt{linux-64}, \texttt{osx-64}, \texttt{osx-arm64} (Apple Silicon), \texttt{linux-aarch64} (ARM Linux / some HPCs). Not every bioinformatics package has a build for every platform. On an M1/M2/M3 Mac, a missing \texttt{osx-arm64} build usually surfaces as \texttt{PackagesNotFoundError}; common fixes are to (1) create the env under Rosetta with \texttt{CONDA\_SUBDIR=osx-64 conda create \ldots}, or (2) find an alternative package with native ARM support. An \texttt{environment.yml} built on one platform is not guaranteed to solve on another --- expect small fix-ups when moving between laptop and cluster, and note the architecture in a comment at the top of the file.
 \end{warnbox}
@@ -119,15 +151,15 @@ Conda packages are built per (OS, CPU) pair --- \texttt{linux-64}, \texttt{osx-6
 Your \texttt{environment.yml} is a reproducible recipe. Commit it to Git, with a header comment noting which architecture built it.
 \end{winbox}
 
-\sprint{7}{Containers --- Reproducibility Beyond Conda}{25}
+\sprint{7}{Containers: Reproducibility Beyond Conda}{25}
 \begin{brainbox}[What is a container?]
-A container is a single image file that bundles an entire Linux userland --- OS libraries, the tool you care about, and everything the tool depends on --- so it runs bit-for-bit identically on any compatible host. Conda manages packages \textit{inside} ecosystems (Python, R, bioconda); containers freeze the layer \textit{below} that, where system libraries, \texttt{glibc} versions, and compiled binaries live. A container is not a virtual machine --- there's no guest kernel --- so startup is near-instant and overhead is minimal.
+A container is a single image file that bundles an entire Linux userland (OS libraries, the tool you care about, and everything that tool depends on) so that it runs identically on any compatible host. Conda manages packages \textit{inside} ecosystems (Python, R, bioconda); containers freeze the layer \textit{below} that, where system libraries, \texttt{glibc} versions, and compiled binaries live. A container is not a virtual machine (there is no guest kernel), so startup is near-instant and overhead is minimal.
 
 Rule of thumb: use conda for interactive development (fast to edit, easy to iterate). Use a container when you ship a pipeline to a cluster, share an analysis with a collaborator on a different OS, or archive a workflow alongside a manuscript --- situations where ``works on my machine'' has to become ``works on yours.''
 \end{brainbox}
 
 \begin{itemize}[nosep]
-  \item \textbf{Two runtimes you'll encounter.} \texttt{Docker} is the developer-facing tool --- it requires a privileged daemon, so most shared HPCs will not run it. Install Docker Desktop on macOS (\url{https://docs.docker.com/desktop/install/mac-install/}) or the Engine on Linux (\url{https://docs.docker.com/engine/install/}). \texttt{Apptainer} (formerly \texttt{Singularity}) is the HPC-safe equivalent: no daemon, no root, and a container is a single \texttt{.sif} file you can \texttt{scp} around. HPCs usually provide a module (\texttt{module avail apptainer}); for a personal Linux install, see \url{https://apptainer.org/docs/user/main/quick_start.html}.
+  \item \textbf{Two runtimes you will encounter.} Docker is the developer-facing tool; it requires a privileged daemon, which is why most shared HPCs will not run it. Install Docker Desktop on macOS (\url{https://docs.docker.com/desktop/install/mac-install/}) or Docker Engine on Linux (\url{https://docs.docker.com/engine/install/}). Apptainer (formerly Singularity) is the HPC-safe equivalent: no daemon, no root, and a container is a single \texttt{.sif} file you can \texttt{scp} around. HPCs usually provide a module (\texttt{module avail apptainer}); for a personal Linux install, see \url{https://apptainer.org/docs/user/main/quick_start.html}.
   \item \textbf{Pull a biocontainer.} The Biocontainers project auto-builds one container per bioconda package. Try samtools:
     \begin{lstlisting}
 docker pull \
@@ -157,13 +189,13 @@ apptainer exec samtools_1.19--h50ea8bc_0.sif \
     Apptainer auto-mounts your home directory and the current working directory, so most pipelines just work.
 \end{itemize}
 \begin{tipbox}[Conda vs.\ container --- when to reach for which]
-Conda gives you speed and easy iteration at the cost of reproducibility guarantees --- two users with the same \texttt{environment.yml} may still resolve to different package builds on different platforms. A container gives you a fixed binary that will run identically for years, at the cost of being heavier to build and harder to edit. Many published pipelines use both: conda during development, a container (often built \textit{from} the conda env) for the frozen release.
+Conda gives you speed and easy iteration at the cost of strict reproducibility: two users with the same \texttt{environment.yml} may still resolve to different package builds on different platforms. A container gives you a fixed binary that will run identically for years, at the cost of being heavier to build and harder to edit. Many published pipelines use both: conda during development, a container (often built from the conda env) for the frozen release.
 \end{tipbox}
 \begin{winbox}[Checkpoint]
-You pulled a container, ran a bioinformatics tool from it without installing anything locally, and mounted a host directory into it. You know which runtime (Docker vs.\ Apptainer) you'd reach for on a laptop vs.\ an HPC, and why.
+You pulled a container, ran a bioinformatics tool from it without installing anything locally, and mounted a host directory into it. You can also name which runtime you would reach for on a laptop versus an HPC, and why.
 \end{winbox}
 
-\sprint{8}{Git + GitHub --- Your Time Machine and Portfolio}{25}
+\sprint{8}{Git and GitHub: Version Control and Your Portfolio}{25}
 \begin{itemize}[nosep]
   \item \textbf{Initialize and commit.}
     \begin{lstlisting}
@@ -172,7 +204,7 @@ cd ~/bioinfo && git init -b main && \
   git commit -m 'Blocks 1-2: Unix foundations'
     \end{lstlisting}
   \item Edit something. \texttt{git diff} to inspect, \texttt{git add}/\texttt{git commit} to save, \texttt{git log --oneline} to review.
-  \item \textbf{.gitignore.} Exclude anything big or generated: \texttt{*.bam}, \texttt{*.fastq.gz}, \texttt{*.vcf.gz}, \texttt{*.sam}. Never commit raw data --- commit the code that produces it and a pointer to where it lives.
+  \item \textbf{.gitignore.} Exclude anything big or generated: \texttt{*.bam}, \texttt{*.fastq.gz}, \texttt{*.vcf.gz}, \texttt{*.sam}. Never commit raw data. Commit the code that produces it and a pointer to where it lives.
   \item \textbf{Set up an SSH key for GitHub} (one-time; after this, no password prompts):
     \begin{lstlisting}
 ssh-keygen -t ed25519 -C "you@example.com"
@@ -188,20 +220,27 @@ git remote add origin \
 git push -u origin main
     \end{lstlisting}
     The \texttt{-u} flag wires \texttt{main} to the remote so future \texttt{git push}es need no arguments.
-  \item \textbf{Clone and pull.} To download a repo onto a new machine or grab someone else's work: \texttt{git clone git@github.com:user/repo.git}. Inside an existing clone, \texttt{git pull} fetches new commits from the remote and merges them into your branch --- this is how you keep a checkout in sync. Practice: clone your own repo into \texttt{/tmp/}, push a change from your main checkout, then run \texttt{git pull} in \texttt{/tmp/} and confirm the change arrived.
+  \item \textbf{Clone and pull.} To download a repo onto a new machine, or to grab someone else's work: \texttt{git clone git@github.com:user/repo.git}. Inside an existing clone, \texttt{git pull} fetches new commits from the remote and merges them into your branch; that is how you keep a checkout in sync. Practice: clone your own repo into \texttt{/tmp/}, push a change from your main checkout, then run \texttt{git pull} in \texttt{/tmp/} and confirm the change arrived.
 \end{itemize}
+\begin{tipbox}[Common Git traps]
+\begin{itemize}[nosep]
+  \item \texttt{git push} refused with ``non-fast-forward'': someone (or past-you on a different machine) pushed commits you do not have. Run \texttt{git pull --rebase} first, then push.
+  \item You committed a large data file by accident. Removing it with \texttt{git rm} only hides it going forward; the old commits still contain it. For a solo repo it is usually simplest to add the pattern to \texttt{.gitignore} and keep moving; for bigger accidents use \texttt{git filter-repo} or the BFG tool.
+  \item \texttt{git status} shows files you did not edit. Line-ending conversion on Windows/WSL is a common culprit: set \texttt{git config --global core.autocrlf input}.
+\end{itemize}
+\end{tipbox}
 \begin{winbox}[Checkpoint]
-Your bioinfo-journey repo has real commits, ignores big files, pushes over SSH without password prompts, and you've proved you can \texttt{clone} and \texttt{pull} from it. This is your portfolio.
+Your bioinfo-journey repo has real commits, ignores big files, pushes over SSH without password prompts, and you have proved you can clone and pull from it. This is the start of your portfolio.
 \end{winbox}
 
 \sprint{9}{Integration Sprint: Full Pipeline}{50}
 \begin{itemize}[nosep]
-  \item Combine everything: write a bash script that creates a conda env, downloads a FASTQ from SRA (use \texttt{fastq-dump} or \texttt{fasterq-dump} from the SRA Toolkit --- \texttt{mamba install -c bioconda sra-tools}), runs \texttt{fastp} for QC, and logs results to a file.
-  \item Use \texttt{tmux} (macOS: \texttt{brew install tmux}; Linux: \texttt{sudo apt install tmux}) or \texttt{screen} so you can disconnect and reconnect (crucial for HPC).
-  \item Commit the script and the QC results (not the raw data) to Git.
+  \item Combine everything: write a bash script that activates a conda environment, downloads a small FASTQ from SRA (use \texttt{fasterq-dump} from the SRA Toolkit; \texttt{mamba install -c bioconda sra-tools}), runs \texttt{fastp} for QC, and appends a one-line summary to a log file.
+  \item Start an HPC-style persistent session with \texttt{tmux} (\hyperref[app:tools]{Appendix~A}) or \texttt{screen} so you can disconnect and reconnect. Essential on a remote cluster where a dropped SSH connection would otherwise kill your job.
+  \item Commit the script and the QC results (not the raw FASTQ) to Git.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-A complete, reproducible, version-controlled QC pipeline. From nothing to this in two blocks.
+A reproducible, version-controlled QC pipeline: a single script you or someone else can re-run on a new sample with one command.
 \end{winbox}
 
 \begin{restbox}[End of Blocks 1--2]

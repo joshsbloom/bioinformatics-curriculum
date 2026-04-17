@@ -11,13 +11,13 @@ Tools change. Methods change. The ability to ask the right question, recognize u
 
 \sprint{1}{The Question Framework}{25}
 \begin{itemize}[nosep]
-  \item Before EVERY analysis, write down answers to: What's the biological question? What would a yes look like? What would a no look like?
-  \item Data inventory: how many rows? columns? What does each represent? What are the expected ranges?
-  \item Sanity checks: $\sim$4--5M variants per human genome, $\sim$20K protein-coding genes, scRNA-seq: 500--5000 genes/cell
-  \item Red flags to watch for: flat Manhattan plot (no signal), bimodal quality scores, batch-correlated PCA
+  \item Before every analysis, write down answers to: what is the biological question, what would a positive result look like, and what would a null result look like?
+  \item Data inventory: how many rows? Columns? What does each represent? What are the expected ranges?
+  \item Sanity checks: roughly 4--5 million variants per human genome, about 20{,}000 protein-coding genes, 500--5000 genes detected per cell in scRNA-seq.
+  \item Red flags to watch for: a flat Manhattan plot (no signal at all), bimodal quality score distributions, PCs that correlate with batch instead of biology.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You wrote a pre-analysis checklist for a dataset. This prevents weeks of wasted analysis on broken data.
+You have a one-page pre-analysis checklist for the dataset you plan to work with. Commit it to your repo before you touch the data.
 \end{winbox}
 
 \subsection{The Question Map}
@@ -39,30 +39,33 @@ Before publishing & Can someone else reproduce this? Are all parameters recorded
 
 \sprint{2}{Prompting AI Like a Bioinformatician}{25}
 \begin{itemize}[nosep]
-  \item Context-first prompting: ``I have a 10x scRNA-seq h5ad file, 50K cells, human PBMCs. I want to...''
-  \item Constraint prompting: ``Use scanpy 1.9+, avoid deprecated functions, include comments at each QC threshold''
-  \item Verification prompting: ``Include assertions that check the output dimensions and warn if something unexpected happens''
-  \item Debugging: paste the FULL error message + stack trace. Never describe the error in your own words.
+  \item Context first: ``I have a 10x scRNA-seq h5ad file, 50{,}000 cells, human PBMCs. I want to \ldots''
+  \item Constraints: ``Use scanpy 1.9 or newer, avoid deprecated functions, include a comment at each QC threshold explaining the rationale.''
+  \item Verification: ``Add assertions that check output dimensions and raise a clear error if something is unexpected.''
+  \item Debugging: paste the full error message and traceback. Do not paraphrase; paste.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You wrote a prompt that generated working, well-documented bioinformatics code on the first try.
+You wrote a single prompt that produced working, well-commented code on the first run, and saved both the prompt and the output to your repo.
 \end{winbox}
 
 \sprint{3}{Spotting AI Hallucinations}{25}
 \begin{itemize}[nosep]
-  \item Common AI mistakes: inventing function names, confusing package versions, incorrect parameter names
-  \item Always test: run AI code on a small known-answer dataset before trusting it on real data
-  \item Cross-validate: ask two different AI tools the same question. If they disagree, investigate.
-  \item Version trap: AI may mix up scanpy 1.8 vs 1.10 syntax, or old Seurat v3 vs v5 functions
+  \item Common failure modes: inventing function names, mixing up package versions, using wrong parameter names, citing papers that do not exist.
+  \item Always test on a small known-answer dataset before trusting the code on real data.
+  \item Cross-check: ask two different AI tools the same question. If they disagree, dig in.
+  \item Version trap: AI outputs frequently mix scanpy 1.8 vs.\ 1.10 syntax, or old Seurat v3 vs.\ v5 function names.
 \end{itemize}
+\begin{dobox}[Concrete exercise]
+Ask an AI tool to ``write scanpy code that computes the mean expression of gene \textit{GAPDH} per Leiden cluster from an \texttt{AnnData} object.'' Run the code as-is. Then verify every function name and argument against the current scanpy documentation (\url{https://scanpy.readthedocs.io/}). If nothing is wrong, repeat the prompt with a deliberately obscure request (e.g., ``use \texttt{sc.tl.expression\_by\_cluster}'' --- this function does not exist). Note in your journal what the AI did when asked about an invented function.
+\end{dobox}
 \begin{winbox}[Checkpoint]
-You found and corrected an AI hallucination. This is a critical skill for AI-augmented research.
+You have a journal entry documenting one verified, correct AI output and one case where the AI either invented a function or hallucinated confidently about an invented API you asked it to use.
 \end{winbox}
 
 \begin{warnbox}[AI ground rules for research]
 \begin{itemize}[nosep]
   \item Always run AI-generated code before trusting it.
-  \item Cite AI assistance in your methods section --- transparency matters.
+  \item Cite AI assistance in your methods section. Transparency matters.
   \item Never use AI for novel method development without deep verification.
   \item AI is a study partner, not a replacement for understanding.
 \end{itemize}
@@ -74,14 +77,14 @@ You found and corrected an AI hallucination. This is a critical skill for AI-aug
 \sprint{4}{Snakemake: Your Pipeline in Code}{50}
 \begin{itemize}[nosep]
   \item Install: \texttt{mamba install -c bioconda -c conda-forge snakemake}. Docs: \url{https://snakemake.readthedocs.io/}.
-  \item Snakemake defines a pipeline as a set of rules. Each rule: input files $\to$ output files + a shell/Python command.
-  \item Start simple: rule download + rule qc + rule align. Run with \texttt{snakemake --cores 4}.
-  \item Snakemake automatically figures out the execution order. Change an input file? It re-runs only what's needed.
-  \item Add a \texttt{conda:} directive to each rule for per-step environments. Now it's fully reproducible.
-  \item Alternative: Nextflow + nf-core if you prefer. Install Nextflow with \texttt{curl -s https://get.nextflow.io | bash}. nf-co.re (\url{https://nf-co.re}) has community-curated pipelines for most assays.
+  \item Snakemake defines a pipeline as a set of rules. Each rule has input files, output files, and a shell or Python command that turns one into the other.
+  \item Start simple: a rule to download, a rule to run QC, a rule to align. Run with \texttt{snakemake --cores 4}.
+  \item Snakemake figures out the execution order from the rules' inputs and outputs. If you change one input file, it re-runs only what depends on that file.
+  \item Add a \texttt{conda:} directive to each rule to pin a per-step environment. At that point the pipeline is fully reproducible on any machine with Snakemake and conda.
+  \item Alternative: Nextflow plus nf-core if you prefer. Install Nextflow with \texttt{curl -s https://get.nextflow.io | bash}. nf-co.re (\url{https://nf-co.re}) hosts community-curated pipelines for most common assays.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You have a multi-step Snakemake pipeline that someone else could clone and run.
+You have a multi-step Snakemake pipeline in a Git repo that someone else could clone and run. Verify by changing one input file and confirming only the downstream rules re-run.
 \end{winbox}
 
 \subsection{Capstone Project}
@@ -111,14 +114,14 @@ This is your final project. It ties together everything from the past 11 blocks 
 
 \sprint{5}{The Reproducibility Test}{25}
 \begin{itemize}[nosep]
-  \item Clone your repo to a different computer (or ask a friend/AI to try).
-  \item Can they install the environment and run the pipeline end-to-end?
-  \item If yes: you're done. If no: fix what's broken. This is the real test.
+  \item Clone your repo to a different computer, or ask a colleague or an AI agent to try.
+  \item Can they install the environment and run the pipeline end-to-end from the commands in your README?
+  \item If yes, you are done. If no, fix whatever broke and repeat.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-Someone else can reproduce your analysis from your repo. That is the standard to aim for.
+Someone else reproduced your analysis from your repo without asking you for help. That is the standard to aim for.
 \end{winbox}
 
 \begin{restbox}[End of the curriculum]
-At this point you can process genomic data in Unix, analyze it in Python and R, apply rigorous statistics, and produce reproducible research. The foundation is in place --- continued learning comes from applying these skills to real research questions.
+At this point you can process genomic data in Unix, analyze it in Python and R, apply rigorous statistics, and produce reproducible research. The foundation is in place; continued learning comes from applying these skills to real research questions.
 \end{restbox}

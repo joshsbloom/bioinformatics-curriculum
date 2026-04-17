@@ -1,8 +1,13 @@
 \chapter{Running Project: From Growth Curves to QTL Mapping}\label{chap:running}
 
-This four-part project follows a single scientific narrative: can you find the genetic basis of a yeast strain's response to an unknown compound? Each problem set is designed to be worked on during or shortly after the block that teaches the relevant skills. The problems build on each other, so work through them in order.
+This four-part project follows a single scientific narrative: can you find the genetic basis of a yeast strain's response to an unknown compound? Each problem set is designed to be worked on during or shortly after the block that teaches the relevant skills. The problems build on each other; work through them in order.
 
-All data can be found in the GitHub repository \texttt{joshsbloom/QuantGenSandbox} and on the linked Dropbox. The project culminates in a QTL mapping scan that identifies a candidate gene and generates a hypothesis about the compound's identity.
+Clone the data once at the start:
+\begin{lstlisting}
+git clone https://github.com/joshsbloom/QuantGenSandbox.git
+cd QuantGenSandbox
+\end{lstlisting}
+A link to a companion Dropbox folder (for the large FASTQ files used in Problem Set 3) is in the repo README. The project culminates in a QTL mapping scan that identifies a candidate gene and generates a hypothesis about the compound's identity.
 
 \begin{center}
 \begin{tabularx}{\textwidth}{l l X}
@@ -60,9 +65,9 @@ Read in the plate reader data (\texttt{growthCurves\_01.csv}) and the Biomek CSV
 
 \begin{dobox}[Tasks]
 \begin{itemize}[nosep]
-  \item Use ggplot2 to make a histogram of doubling times by strain (colored by strain).
+  \item Use ggplot2 to make a histogram of doubling times by strain (filled by strain).
   \item Make a violin plot showing individual data points, mean, and 95\% confidence interval of the mean for each strain.
-  \item Use \texttt{t.test()} to test for a difference in means. Think about whether a paired t-test is appropriate here and why or why not.
+  \item Use \texttt{t.test()} to test for a difference in means. Is a paired t-test appropriate here? (Consider: would there be a natural pairing between a specific BY well and a specific RM well?)
 \end{itemize}
 \end{dobox}
 
