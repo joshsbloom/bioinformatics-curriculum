@@ -1,123 +1,292 @@
-\chapter{Blocks 7--8: Statistics for Genomics}\label{chap:stats}
+\chapter{Blocks 7--8: Statistics for Genomics (in R)}\label{chap:stats}
 
-\textbf{Primary:} Distributions, multiple testing, linear models, PCA\quad|\quad\textbf{Interleave:} Python + R implementation, genomic data
+\textbf{Primary:} Distributions, hypothesis tests, multiple testing, linear models, power, PCA, Bayesian ideas\quad|\quad\textbf{Language:} R throughout
 
 \begin{brainbox}[Why this unit matters most]
 Many weak genomics papers have a statistics problem, not a coding problem.
 
-You do not need to derive proofs. You do need to know: which distribution fits my data? What test is appropriate? What happens when my assumptions are wrong?
+You do not need to derive proofs. You do need to know: which distribution fits my data, what test is appropriate, what happens when my assumptions are wrong, and how large a sample do I need before starting.
 
-This block teaches by simulation: generate data you already know the truth about, break assumptions on purpose, and see what the methods do.
+This block teaches by simulation in R. You generate data you already know the truth about, break assumptions on purpose, and observe what the methods do. R has the most direct vocabulary for this kind of work: one function per distribution (\texttt{rnorm}, \texttt{rbinom}, \texttt{rpois}, \texttt{rnbinom}), one-line model fitting (\texttt{lm}, \texttt{glm}), first-class support for resampling (\texttt{sample}, \texttt{replicate}), and the standard p-value adjustment (\texttt{p.adjust}).
 \end{brainbox}
 
+\begin{tipbox}[Before you start]
+Open RStudio (or another R IDE). Create a fresh script for each sprint and save it under \texttt{\textasciitilde/bioinfo/block7/scripts/}. Install \texttt{MASS}, \texttt{broom}, \texttt{ggplot2}, \texttt{lme4}, and (via BiocManager) \texttt{qvalue} and \texttt{limma} up front:
+\begin{lstlisting}
+install.packages(c("MASS", "broom", "ggplot2", "lme4"))
+BiocManager::install(c("qvalue", "limma"))
+\end{lstlisting}
+Every sprint below calls \texttt{set.seed(1)} at the top so your simulations match the answer key.
+\end{tipbox}
 
-\section{Block 7: Distributions, Testing, and Models}
+
+\section{Block 7: Distributions, Tests, and Corrections}
 
 \sprint{1}{Which Distribution Fits My Data?}{25}
 \begin{itemize}[nosep]
-  \item Simulate from each: \texttt{np.random.binomial}, \texttt{np.random.poisson}, \texttt{np.random.negative\_binomial}, \texttt{np.random.normal}.
-  \item Plot histograms side by side. Then overlay a real dataset (raw RNA-seq counts from Block 5, or a column of allele frequencies or expression values).
-  \item Key observation: raw RNA-seq counts are not normal; they are overdispersed and well fit by a negative binomial. That is why DESeq2 and edgeR use negative-binomial models.
+  \item Simulate 10{,}000 draws from each of four common distributions and plot histograms on one page:
+    \begin{lstlisting}
+set.seed(1)
+par(mfrow = c(2, 2))
+hist(rnorm(1e4, mean = 5, sd = 2),
+     breaks = 50, main = "Normal")
+hist(rbinom(1e4, size = 100, prob = 0.1),
+     breaks = 50, main = "Binomial")
+hist(rpois(1e4, lambda = 2),
+     breaks = 50, main = "Poisson")
+hist(rnbinom(1e4, size = 1, mu = 2),
+     breaks = 50, main = "Negative Binomial")
+    \end{lstlisting}
+    Compare shapes. Poisson and NB have the same mean; NB has a heavier right tail.
+  \item Overlay a real dataset. Load a counts vector from Block 5 (\texttt{counts <- assay(se)[, 1]}) and plot its histogram. Raw RNA-seq counts are not normal --- they are overdispersed and much better fit by a negative binomial.
+  \item Fit an NB to the data and read off the parameters:
+    \begin{lstlisting}
+library(MASS)
+fit <- fitdistr(counts, "negative binomial")
+fit$estimate   # size (dispersion), mu (mean)
+    \end{lstlisting}
+    Small \texttt{size} means high overdispersion (long tail). This is why DESeq2 and edgeR use NB models rather than Poisson or normal.
 \end{itemize}
-\begin{winbox}[Checkpoint]
-You can look at a histogram of counts and name a plausible distribution family. Save a four-panel comparison figure to your repo.
-\end{winbox}
-
-\begin{tipbox}[The distribution cheat sheet]
+\begin{tipbox}[Distribution cheat sheet (R's naming convention)]
+R names each distribution with four prefixes: \texttt{d}ensity, \texttt{p}robability (CDF), \texttt{q}uantile, \texttt{r}andom draws. So \texttt{rnorm} draws random normals, \texttt{pnorm} gives $P(X \leq x)$, \texttt{qnorm} gives the inverse CDF, \texttt{dnorm} the density. The same four-prefix pattern covers \texttt{binom}, \texttt{pois}, \texttt{nbinom}, \texttt{beta}, \texttt{hyper}, \texttt{unif}, \texttt{t}, \texttt{chisq}, \texttt{f}, and more.
 \begin{itemize}[nosep]
-  \item Binomial: counting successes (alt allele reads out of total reads)
-  \item Poisson: rare events (mutations per gene)
-  \item Negative binomial: counts with extra variation (RNA-seq --- this is the big one)
-  \item Normal: continuous measurements after transformation (log-expression, quantitative traits)
-  \item Beta: values between 0 and 1 (allele frequencies, methylation)
-  \item Hypergeometric: overlap significance (gene set enrichment, Fisher's exact test)
+  \item Binomial: counting successes (alt allele reads out of total reads at a site)
+  \item Poisson: rare events with a known rate (mutations per gene per generation)
+  \item Negative binomial: counts with extra variation (RNA-seq --- the big one)
+  \item Normal: continuous measurements, often after transformation (log-expression, height)
+  \item Beta: values between 0 and 1 (allele frequencies, methylation $\beta$-values)
+  \item Hypergeometric: overlap significance (gene-set enrichment, Fisher's exact test)
 \end{itemize}
 \end{tipbox}
-
-\sprint{2}{Multiple Testing: The Genomics Problem}{25}
-\begin{itemize}[nosep]
-  \item Simulate 1,000,000 null p-values: \texttt{p = np.random.uniform(0, 1, 1\_000\_000)}.
-  \item Count how many are less than 0.05. You should see about 50,000: pure noise at the nominal $\alpha$ = 0.05 threshold.
-  \item Apply Bonferroni: threshold $=$ $0.05 / 1{,}000{,}000$. Conservative, and misses small real effects.
-  \item Apply Benjamini--Hochberg: controls the false discovery rate (expected proportion of false calls \textit{among rejections}), not the family-wise error rate. This is the genomics standard.
-  \item Plot a QQ plot of sorted $-\log_{10}(\text{observed } p)$ vs.\ $-\log_{10}(\text{expected } p)$. Deviation above the diagonal is signal (or inflation).
-\end{itemize}
 \begin{winbox}[Checkpoint]
-You simulated a million null p-values, counted false positives at $p < 0.05$, and applied both Bonferroni and BH corrections. Report how many discoveries survive each.
+You produced a four-panel histogram comparing simulated distributions, fit an NB to a real counts vector, and reported its mean and dispersion. Save the figure and the fit summary in your repo.
 \end{winbox}
 
-\sprint{3}{Linear Models: The GWAS Engine}{25}
+\sprint{2}{Hypothesis Tests and Permutations}{25}
+R ships every common test as a one-liner. The more useful skill is choosing the right one and checking its assumptions.
 \begin{itemize}[nosep]
-  \item A GWAS is a linear regression run millions of times: \texttt{phenotype \textasciitilde{} genotype + covariates}, one model per variant.
-  \item In Python use \texttt{statsmodels.OLS}; in R use \texttt{lm()}. Fit a model, interpret the genotype coefficient, and check residuals for problems.
-  \item Extend with GLMs: logistic regression for case/control (binary outcomes), Poisson or negative-binomial for counts.
-  \item Mixed-effects models add random effects for family structure or batch. Conceptual understanding is enough for this sprint; you will use them in the Running Project.
+  \item \textbf{Two-sample t-test.} \texttt{t.test(x, y)} tests equality of means; Welch's correction is the default (no equal-variance assumption). Inspect: the returned object is a list with \texttt{statistic}, \texttt{p.value}, \texttt{estimate}, \texttt{conf.int}. Access them with \texttt{\$} or cleanly with \texttt{broom::tidy(t.test(x, y))}.
+  \item \textbf{Wilcoxon / Mann--Whitney.} \texttt{wilcox.test(x, y)} is the non-parametric alternative --- ranks instead of values. Use when distributions are clearly non-normal or when there are outliers.
+  \item \textbf{Counts: Fisher's exact.} \texttt{fisher.test(matrix(c(a, b, c, d), 2, 2))} on a $2 \times 2$ table; used everywhere for gene-set enrichment (significant genes $\times$ pathway membership).
+  \item \textbf{Permutation test (when in doubt).} Any test-statistic, any null, one loop:
+    \begin{lstlisting}
+set.seed(1)
+obs <- t.test(x, y)$statistic
+combined <- c(x, y); n_x <- length(x)
+null <- replicate(1000, {
+  perm <- sample(combined)
+  t.test(perm[1:n_x],
+         perm[(n_x + 1):length(combined)])$statistic
+})
+p_perm <- mean(abs(null) >= abs(obs))
+    \end{lstlisting}
+    Assumption: exchangeability of group labels under the null. No normality assumption. Useful whenever the parametric test is doubtful.
+  \item \textbf{Effect size, not just p-value.} A significant result with a tiny effect is usually not interesting. Report \texttt{mean(x) - mean(y)} alongside Cohen's $d = (\mu_1 - \mu_2) / s_\text{pooled}$, and a 95\% confidence interval (from \texttt{t.test} directly).
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You fit a single-SNP association test (the core unit of a GWAS) and can read off the effect size and p-value for the genotype term.
+On a simulated two-group dataset (\texttt{x <- rnorm(30, 0, 1); y <- rnorm(30, 0.5, 1)}), run \texttt{t.test}, \texttt{wilcox.test}, and your permutation test. The three p-values should agree to within rounding. Record all three in your journal, with effect size and 95\% CI.
 \end{winbox}
 
+\sprint{3}{Multiple Testing in R}{25}
+\begin{itemize}[nosep]
+  \item \textbf{One million null tests.} Simulate the genomics-scale problem:
+    \begin{lstlisting}
+set.seed(1)
+p <- runif(1e6)
+sum(p < 0.05)   # expect ~50,000: pure noise
+    \end{lstlisting}
+  \item \textbf{\texttt{p.adjust} is the one function to remember.} \texttt{p.adjust(p, method = "bonferroni")} divides the threshold by $m$; very conservative. \texttt{p.adjust(p, method = "BH")} is Benjamini--Hochberg and controls the false discovery rate (expected proportion of false calls \textit{among rejections}). The FDR approach is the genomics standard.
+    \begin{lstlisting}
+sum(p.adjust(p, "bonferroni") < 0.05)  # should be 0
+sum(p.adjust(p, "BH") < 0.05)          # should be 0
+    \end{lstlisting}
+  \item \textbf{Add real signal.} Now mix a little: 99\% null, 1\% from a shifted alternative.
+    \begin{lstlisting}
+set.seed(2)
+m <- 1e5; m1 <- 1e3
+p_null <- runif(m - m1)
+# alternatives: small p-values
+p_alt  <- rbeta(m1, 0.2, 1)
+p_mix  <- c(p_null, p_alt)
+sum(p.adjust(p_mix, "BH") < 0.05)
+    \end{lstlisting}
+    You should recover a substantial fraction of the 1000 true positives with BH while controlling expected FDR at 5\%.
+  \item \textbf{QQ plot with ggplot2.}
+    \begin{lstlisting}
+library(ggplot2)
+df <- data.frame(
+  obs = -log10(sort(p_mix)),
+  exp = -log10(ppoints(length(p_mix))))
+ggplot(df, aes(exp, obs)) +
+  geom_point(size = 0.3) +
+  geom_abline(slope = 1, intercept = 0,
+              color = "red") +
+  labs(x = expression(-log[10]("expected P")),
+       y = expression(-log[10]("observed P")))
+    \end{lstlisting}
+    Points on the diagonal are null; upward deviation at the tail is signal. Deviation across the whole line (not just the tail) is inflation --- investigate.
+  \item \textbf{Bonus: \texttt{qvalue} for $\pi_0$ estimation.} The \texttt{qvalue} package estimates $\pi_0$, the proportion of truly null tests, and gives per-test q-values (per-test FDR). \texttt{qvalue(p\_mix)\$pi0} should be near 0.99 on the simulation above.
+\end{itemize}
 \begin{warnbox}[Common mistakes to watch for]
 \begin{itemize}[nosep]
-  \item Using a t-test when you have covariates to control for (use regression instead)
-  \item Treating FDR as the probability any specific result is false (it's the expected proportion)
-  \item Ignoring population structure in GWAS (this inflates false positives massively)
-  \item Applying normal-distribution tests to count data (use NB or nonparametric tests)
+  \item Treating BH FDR as the probability \textit{this specific} result is false. It is the expected proportion of false calls among all rejections.
+  \item Reporting an uncorrected p-value alongside 10{,}000 tests without saying which correction was used.
+  \item Using Bonferroni after BH (or vice versa) on the same p-vector: pick one.
+  \item Applying FDR to a p-value vector that was produced under a broken null (e.g., inflation from unmodeled structure). FDR control assumes the p-value calibration is correct to begin with.
 \end{itemize}
 \end{warnbox}
-
-
-\section{Block 8: Dimensionality Reduction and Bayesian Ideas}
-
-\sprint{4}{PCA: Finding Hidden Structure}{25}
-\begin{itemize}[nosep]
-  \item Run PCA on a 1000 Genomes subset (or any genotype matrix) with \texttt{sklearn.decomposition.PCA}.
-  \item Plot PC1 vs.\ PC2, colored by population label. Continental ancestry typically emerges as visible clusters.
-  \item Make a scree plot (variance explained per PC). The ``elbow'' suggests how many PCs carry signal rather than noise.
-  \item This is why GWAS includes the top PCs as covariates: they absorb ancestry and reduce population-structure false positives.
-\end{itemize}
 \begin{winbox}[Checkpoint]
-Your PC1--PC2 plot shows clear clusters by population label, and your scree plot shows a visible elbow (commonly around 3--10 components on 1000 Genomes-scale data).
+You simulated a million null p-values and a mixture of nulls plus real signal, applied Bonferroni and BH, produced a QQ plot that shows tail deviation only for the mixture, and noted $\pi_0$ from \texttt{qvalue}. Report the three numbers (Bonferroni rejections, BH rejections, $\pi_0$) in your journal.
 \end{winbox}
 
-\sprint{5}{UMAP and Clustering for Single-Cell}{25}
+
+\section{Block 8: Models, Power, and Structure}
+
+\sprint{4}{Linear Models, GLMs, and Diagnostics}{25}
+A GWAS fits a linear model per variant. Differential expression fits a GLM per gene. Mixed models add random effects for batch or family. All three live in base R plus \texttt{lme4}.
 \begin{itemize}[nosep]
-  \item UMAP is a nonlinear embedding that preserves local structure well and global structure poorly. It is useful for single-cell data, but easy to over-interpret.
-  \item Rule to remember: in a UMAP plot, between-cluster distances and orientations are not meaningful; two clusters close together are not necessarily more similar than two far apart.
-  \item Leiden clustering is graph-based and has a \texttt{resolution} parameter. Run several resolutions and compare the partitions; ``correct'' resolution is a modeling choice, not a fact.
-  \item Hands-on: load a pre-processed single-cell dataset and make UMAP and cluster plots in scanpy or Seurat.
+  \item \textbf{Linear regression.} Simulate phenotype, genotype, and a covariate, then fit:
+    \begin{lstlisting}
+set.seed(1)
+n <- 500
+geno  <- rbinom(n, 2, 0.3)      # 0/1/2 allele count
+age   <- rnorm(n, 50, 10)
+pheno <- 0.3 * geno + 0.02 * age + rnorm(n)
+
+fit <- lm(pheno ~ geno + age)
+summary(fit)
+confint(fit)            # 95% CI for each coefficient
+    \end{lstlisting}
+    The genotype coefficient should be near 0.3 and significant. This is one row of a GWAS.
+  \item \textbf{Tidy output with broom.}
+    \begin{lstlisting}
+library(broom)
+tidy(fit, conf.int = TRUE)
+glance(fit)   # R^2, AIC, BIC, residual SE
+    \end{lstlisting}
+    \texttt{tidy} returns a tibble with one row per coefficient (\texttt{estimate}, \texttt{std.error}, \texttt{statistic}, \texttt{p.value}, \texttt{conf.low}, \texttt{conf.high}). Combine with \texttt{dplyr} and you can iterate over thousands of variants with \texttt{purrr::map\_dfr} and still get a clean data frame out.
+  \item \textbf{Residual diagnostics.} \texttt{plot(fit)} gives four diagnostic plots: residuals vs.\ fitted (non-linearity), QQ plot of residuals (normality), scale-location (heteroscedasticity), residuals vs.\ leverage (outliers). Spend a minute on each; if the QQ plot fans out at the tails, consider transforming or switching to a GLM.
+  \item \textbf{GLMs when the outcome is not continuous.} Case/control: \texttt{glm(case \textasciitilde{} geno + age, family = binomial)}. Counts: \texttt{glm(counts \textasciitilde{} geno, family = poisson)} --- and if counts are overdispersed, use \texttt{MASS::glm.nb} for a negative-binomial GLM. The \texttt{summary} and \texttt{confint} calls are identical.
+  \item \textbf{Mixed-effects models} for correlated observations (multiple measurements per donor, batches, family structure):
+    \begin{lstlisting}
+library(lme4)
+# y depends on treatment, with a random intercept
+# per donor:
+m <- lmer(y ~ treatment + (1 | donor), data = d)
+summary(m)
+confint(m, method = "Wald")
+    \end{lstlisting}
+    You will use these in Running Project Problem Set 2.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You produced a UMAP with Leiden clusters overlaid at two different resolutions and wrote one sentence in your journal about what changes and what stays the same.
+You simulated a 500-sample dataset, fit \texttt{lm}, \texttt{glm} (logistic), and \texttt{lmer}, and read coefficients plus 95\% CIs from each. Your \texttt{plot(fit)} diagnostics show no obvious curvature or outliers on the simulated data (as expected --- the data were simulated under the model's assumptions). Break an assumption on purpose and see what the diagnostics show.
 \end{winbox}
 
-\sprint{6}{Bayesian Thinking (Conceptual)}{25}
+\sprint{5}{Power Analysis by Simulation}{25}
+``How many samples do I need'' is the question every biologist asks and every statistician wishes more people asked \textit{before} running the experiment. Closed-form formulas exist for simple tests, but simulation works for any design.
 \begin{itemize}[nosep]
-  \item Bayes' theorem in one line: posterior $\propto$ prior $\times$ likelihood. You update what you believed before seeing the data with what the data tell you.
-  \item Empirical Bayes estimates the prior from the data itself. DESeq2's dispersion shrinkage is exactly this: share information across genes to stabilize per-gene estimates.
-  \item Why it matters: Bayesian fine-mapping (e.g., SuSiE) reports 95\% credible sets of causal variants instead of individual p-values.
-  \item You do not need to implement MCMC. You do need to know what ``95\% credible set'' means: with posterior probability 0.95 under the model, the true causal variant is one of the variants in the set.
+  \item \textbf{Simple baseline: \texttt{power.t.test}.}
+    \begin{lstlisting}
+power.t.test(delta = 0.5, sd = 1,
+             sig.level = 0.05, power = 0.8)
+# -> n = ~64 per group
+    \end{lstlisting}
+    Use as a sanity check for the simulation below.
+  \item \textbf{Simulate power directly.} The definition is operational: power = fraction of experiments in which the test rejects, given a chosen effect size.
+    \begin{lstlisting}
+set.seed(1)
+sim_power <- function(n, delta, nsim = 1000) {
+  rejected <- replicate(nsim, {
+    x <- rnorm(n, 0, 1)
+    y <- rnorm(n, delta, 1)
+    t.test(x, y)$p.value < 0.05
+  })
+  mean(rejected)
+}
+sim_power(n = 30, delta = 0.5)
+sim_power(n = 60, delta = 0.5)
+    \end{lstlisting}
+    At $n = 30$ per group with $\delta = 0.5$, expect power near 0.48; at $n = 60$, near 0.80.
+  \item \textbf{A power grid.} Loop over sample sizes and effect sizes:
+    \begin{lstlisting}
+grid <- expand.grid(n = c(10, 30, 60, 120),
+                    delta = seq(0, 1, by = 0.1))
+grid$power <- mapply(sim_power, grid$n, grid$delta)
+
+library(ggplot2)
+ggplot(grid, aes(delta, power,
+                 color = factor(n))) +
+  geom_line() +
+  geom_hline(yintercept = 0.8, linetype = 2)
+    \end{lstlisting}
+    The result is a family of S-curves --- one per sample size --- and a horizontal guide at 80\%. Pick the smallest $n$ whose curve crosses 0.8 at your expected effect size.
+  \item \textbf{Why simulate?} Closed-form power is limited to a handful of designs. Simulation generalizes: unbalanced groups, nuisance covariates, mixed-effects designs, different test statistics, and non-normal outcomes are all just a change to the inner loop.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You can explain Bayes' theorem with one genomics example (e.g., DESeq2 dispersion shrinkage or SuSiE credible sets) in plain English, in two to three sentences.
+You produced a power-by-sample-size plot with a 0.8 reference line and can name the sample size needed to detect your chosen effect. Save the plot; you will use the same pattern in Running Project Problem Set 1.
+\end{winbox}
+
+\sprint{6}{PCA and Bayesian Shrinkage in R}{25}
+\begin{itemize}[nosep]
+  \item \textbf{PCA with \texttt{prcomp}.} Load a genotype matrix \texttt{G} (rows = samples, columns = variants; for practice use a 1000 Genomes subset or a simulated one).
+    \begin{lstlisting}
+pc <- prcomp(G, center = TRUE, scale. = TRUE)
+str(pc, max.level = 1)
+# pc$x : sample scores (n x k)
+# pc$sdev: stdev per PC
+    \end{lstlisting}
+    \texttt{scale. = TRUE} standardizes columns --- important when features are on different scales. For MAF-aligned genotypes it is conventional.
+  \item \textbf{Plot the first two PCs} colored by a population label:
+    \begin{lstlisting}
+df <- data.frame(PC1 = pc$x[, 1],
+                 PC2 = pc$x[, 2],
+                 pop = pop_label)
+library(ggplot2)
+ggplot(df, aes(PC1, PC2, color = pop)) +
+  geom_point(alpha = 0.7)
+    \end{lstlisting}
+    Continental ancestry typically separates cleanly on PC1--PC2; within-continent structure shows up on PC3--PC5.
+  \item \textbf{Scree plot and variance explained.}
+    \begin{lstlisting}
+ve <- pc$sdev^2 / sum(pc$sdev^2)
+plot(ve[1:20], type = "b",
+     xlab = "PC", ylab = "variance explained")
+    \end{lstlisting}
+    The ``elbow'' approximates how many PCs carry signal rather than noise. For GWAS, including the top 5--10 PCs as covariates typically absorbs ancestry and controls population-structure inflation.
+  \item \textbf{Bayesian shrinkage in one example.} Empirical Bayes shares information across genes (or tests) to stabilize noisy per-unit estimates. The cleanest demonstration is \texttt{limma}:
+    \begin{lstlisting}
+library(limma)
+# expr: gene x sample matrix, design: model matrix
+fit  <- lmFit(expr, design)
+fitB <- eBayes(fit)          # shrinks per-gene variance
+topTable(fitB, coef = 2, number = 10)
+    \end{lstlisting}
+    \texttt{eBayes} borrows strength across genes: genes with few observations get their variance pulled toward the global trend, which stabilizes tiny denominators and reduces false positives. Compare the moderated t-statistic \texttt{fitB\$t} to the ordinary t \texttt{fit\$coefficients / fit\$stdev.unscaled}. Same idea appears in DESeq2's dispersion shrinkage and in SuSiE's credible sets.
+  \item \textbf{``95\% credible set'' in plain language.} Under the model, there is posterior probability 0.95 that the true causal variant is one of the variants in the set. The set itself is data-dependent, unlike a frequentist confidence interval whose \textit{procedure} has 95\% coverage.
+\end{itemize}
+\begin{winbox}[Checkpoint]
+Your PC1--PC2 plot shows clear clusters by population label, your scree plot has a visible elbow, and you ran \texttt{limma}'s \texttt{eBayes} and can articulate in one sentence what shrinking per-gene variance toward a common trend accomplishes.
 \end{winbox}
 
 \begin{restbox}[End of Blocks 7--8]
-This is the most conceptually dense part of the curriculum. Take some time to let it settle before moving into applications.
+This is the most conceptually dense part of the curriculum. Take a day or two to let it settle before moving into applications.
 \end{restbox}
 
-\subsection{Checkpoint:}
+\subsection{Can I move on? Checkpoint}
 \begin{itemize}[nosep]
-  \item You can identify which distribution fits a genomic dataset
-  \item You can apply and explain Bonferroni and BH correction
-  \item You can fit a linear model and interpret coefficients
-  \item You can run PCA and explain what population structure looks like
-  \item You can explain empirical Bayes at a conceptual level
+  \item You can simulate from any common distribution in R and identify which family fits a real dataset
+  \item You can run t-test, Wilcoxon, Fisher's exact, and a custom permutation test, and report effect size plus CI alongside p-value
+  \item You can apply Bonferroni and BH corrections with \texttt{p.adjust} and explain the difference
+  \item You can fit \texttt{lm}, \texttt{glm}, and \texttt{lmer}, pull coefficients with \texttt{broom::tidy}, and read residual diagnostics
+  \item You can write a power-by-sample-size simulation and read off the required $n$
+  \item You can run PCA with \texttt{prcomp}, interpret the scree plot, and explain \texttt{limma}'s eBayes shrinkage as one concrete empirical-Bayes example
 \end{itemize}
 
 \subsection{Resources}
 \begin{itemize}[nosep]
-  \item StatQuest YouTube (Josh Starmer) --- highly recommended for visual explanations of statistical concepts
-  \item Holmes \& Huber -- \textit{Modern Statistics for Modern Biology} (free online)
-  \item Storey \& Tibshirani -- Statistical significance for genomewide studies (the FDR paper)
+  \item StatQuest YouTube (Josh Starmer) --- visual explanations of most concepts above
+  \item Holmes \& Huber -- \textit{Modern Statistics for Modern Biology} (free online; all examples in R)
+  \item \textit{ModernDive} (moderndive.com) --- introductory statistics with R, free online
+  \item Storey \& Tibshirani -- Statistical significance for genomewide studies (PNAS 2003; the FDR / q-value paper)
+  \item The \texttt{broom} vignette and the \texttt{lme4} cheat sheet on the Posit site
 \end{itemize}

@@ -27,7 +27,7 @@ The pre-built PDF is in the repo; you only need to build it yourself if you edit
 | 1–2   | Unix | Pipes, scripting, conda environments, containers |
 | 3–4   | Python | Parsing, Pandas, plotting, bio libraries |
 | 5–6   | R | Bioconductor, DESeq2, ggplot2 |
-| 7–8   | Statistics | Distributions, multiple testing, PCA, Bayesian ideas |
+| 7–8   | Statistics (R) | Distributions, tests, multiple testing, linear models, power by simulation, PCA, eBayes shrinkage |
 | 9–10  | Applications | scRNA-seq pipeline, GWAS pipeline |
 | 11–12 | Capstone | AI-assisted analysis, Snakemake, final project |
 
