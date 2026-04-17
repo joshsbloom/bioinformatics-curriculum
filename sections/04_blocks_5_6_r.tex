@@ -29,7 +29,20 @@ res[["samples"]]  # c("A", "B", "C")
   \item \textbf{Indexing gotchas.} R is 1-based: \texttt{df[1,]} is row 1, not row 2. Negative indices exclude: \texttt{df[-1,]} drops row 1. Logical vectors filter: \texttt{df[df\$pval < 0.05, ]}.
 \end{itemize}
 \begin{tipbox}[R quirks worth naming up front]
-The assignment operator is \texttt{<-} (not \texttt{=}); both work in most contexts, but \texttt{<-} is the R convention. A single \texttt{=} inside a function call assigns an argument, not a variable. \texttt{NA} means ``missing'' and \textit{propagates} through arithmetic: \texttt{mean(c(1,2,NA))} returns \texttt{NA} unless you pass \texttt{na.rm = TRUE}. Factors look like strings but behave like integers --- if a column's contents surprise you, run \texttt{class()} first.
+\textbf{Assignment operator: \texttt{<-} vs.\ \texttt{=}.} The R convention is \texttt{<-} for creating variables (\texttt{x <- 5}). The \texttt{=} sign is also accepted at the top level and does the same thing, but inside a function call it does something \textit{different}: it names an argument rather than creating a variable. Consider:
+\begin{lstlisting}
+mean(x = c(1, 2, NA), na.rm = TRUE)  # names the first and
+                                     # second arguments
+mean(x <- c(1, 2, NA), na.rm = TRUE) # creates a variable x
+                                     # in the surrounding
+                                     # scope AND passes it
+                                     # positionally
+\end{lstlisting}
+The first form is what you want almost every time. The second form has a side effect (a new \texttt{x} visible outside the call) which is almost never what you want and is a classic source of confusing bugs. So: use \texttt{=} to match arguments inside \texttt{f(arg = value)} calls, and use \texttt{<-} to create variables at the top level. In practice, if you follow that rule both sides of your code read correctly and you never have to think about it again.
+
+Does it really matter? Mostly for readability and for avoiding the side-effect bug above --- execution-wise, \texttt{x <- 5} and \texttt{x = 5} at the top level produce the same bindings. Most R style guides (tidyverse, Bioconductor, Google's) specify \texttt{<-} for assignment, so code you read in the wild will look that way. Editors like RStudio bind \texttt{Alt--} (Windows/Linux) or \texttt{Option--} (macOS) to type \texttt{<-} in one keystroke.
+
+\textbf{\texttt{NA}} means ``missing'' and \textit{propagates} through arithmetic: \texttt{mean(c(1,2,NA))} returns \texttt{NA} unless you pass \texttt{na.rm = TRUE}. \textbf{Factors} look like strings but behave like integers; if a column's contents surprise you, run \texttt{class()} first.
 \end{tipbox}
 \begin{winbox}[Checkpoint]
 You loaded a TSV, inspected its structure with \texttt{str()}, pulled one column and one row, and can describe the difference between a vector, a list, and a data frame. Apply functions and the tidyverse come next.
