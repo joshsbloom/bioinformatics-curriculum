@@ -28,12 +28,25 @@ Run \texttt{tree \textasciitilde/bioinfo} and paste its output into \texttt{jour
 \end{winbox}
 
 \sprint{2}{Pipes: Chaining Small Tools}{25}
+
+\begin{warnbox}[Read this before you paste any long command from this curriculum]
+Several commands below are too long to fit on one printed line, so either the source splits them across lines (with backslashes or pipes) or the PDF wraps them visually. Two rules that will save you hours:
+\begin{itemize}[nosep]
+  \item \textbf{A backslash (\textbackslash) at the end of a line means ``continue this command on the next line.''} The backslash must be the \textit{very last} character; a single trailing space turns \texttt{\textbackslash~} into ``escape a space'' and the line continuation is lost. Do not put anything (not even a \texttt{\#} comment) after the backslash.
+  \item \textbf{Inside a URL or any other token, \texttt{\textbackslash}-then-newline is consumed with no replacement character.} So \texttt{https://host/\textbackslash}$\hookleftarrow$\texttt{path} reassembles to \texttt{https://host/path} with no space inserted. This is why you will see URLs broken across lines below with no leading whitespace on the continuation.
+\end{itemize}
+A safer alternative when you have a choice: end the line on a pipe (\texttt{|}) or a logical operator (\texttt{\&\&}, \texttt{||}) instead. The shell knows a pipeline is incomplete, so it reads the next line automatically; no backslash is needed. If a copy-paste from the PDF misbehaves, suspect a smart-quote, a stripped backslash, or a soft line break --- retype the break by hand.
+\end{warnbox}
+
 \begin{itemize}[nosep]
   \item The pipe character \texttt{|} sends the standard output of one command into the standard input of the next. This is the core of the ``small tools, composed'' Unix design.
   \item Try: \texttt{echo 'ATGCGATCGATCG' | grep -o . | sort | uniq -c | sort -rn}. Read it left to right: print the string, split into one character per line, sort the lines, count adjacent duplicates, sort by count descending. You should see A, C, G, T each with a count.
-  \item Download the S288C yeast reference genome (tarball is $\sim$4~MB):
+  \item Download the S288C yeast reference genome (tarball is $\sim$4~MB). The URL is long, so the source below splits it with backslash continuation --- the continuation lines start at column 1 with no leading spaces so the URL reassembles cleanly:
     \begin{lstlisting}
-curl -O https://downloads.yeastgenome.org/sequence/S288C_reference/genome_releases/S288C_reference_genome_Current_Release.tgz
+curl -O \
+https://downloads.yeastgenome.org/sequence/\
+S288C_reference/genome_releases/\
+S288C_reference_genome_Current_Release.tgz
 tar xzf S288C_reference_genome_Current_Release.tgz
 cd S288C_reference_genome_*
     \end{lstlisting}
@@ -43,35 +56,24 @@ cd S288C_reference_genome_*
 Try \texttt{wget} instead of \texttt{curl -O}, or open \url{https://www.yeastgenome.org/} and navigate to Sequence $\to$ Download. A long error with ``Could not resolve host'' usually means no network; ``404 Not Found'' means the file moved.
 \end{tipbox}
 \begin{winbox}[Checkpoint]
-You chained four commands with pipes and counted nucleotide frequencies. You also inspected a real genome FASTA and identified what each header line names.
+You chained four commands with pipes, counted nucleotide frequencies, and downloaded and un-tarred the yeast reference. You also inspected the FASTA and identified what each header line names.
 \end{winbox}
 
 \sprint{3}{Grep and Awk: Extracting Lines and Columns}{25}
-
-\begin{warnbox}[Read this before typing any multi-line command in this sprint]
-You will see shell commands below that span several lines. A backslash (\textbackslash) at the end of a line tells the shell ``continue this command on the next line.'' Three rules that catch everyone at least once:
-\begin{itemize}[nosep]
-  \item The backslash must be the \textit{very last character} on the line. A single trailing space after it and the shell treats \texttt{\textbackslash~} as the escape sequence for a space, not a line continuation.
-  \item Do not put anything (not even a \texttt{\#} comment) on the same line after the backslash.
-  \item Inside a URL or any other token, the backslash-newline pair is consumed with no replacement character. \texttt{https://host/\textbackslash\textbackslash \\ path} reassembles to \texttt{https://host/path} --- no space inserted.
-\end{itemize}
-A safer alternative when you have a choice: end the line on a pipe (\texttt{|}) or a logical operator (\texttt{\&\&}, \texttt{||}) instead. The shell knows a pipeline is incomplete, so it reads the next line automatically and no backslash is needed. If a copy-paste from a PDF misbehaves, suspect a smart-quote, a stripped backslash, or a soft line break --- retype the continuation by hand.
-\end{warnbox}
-
 \begin{itemize}[nosep]
   \item \texttt{grep} searches for patterns. \texttt{grep -c '>' file.fasta} counts sequences; \texttt{grep -v} inverts the match (keeps lines that do \textit{not} match).
   \item \texttt{awk} extracts and transforms whitespace- or tab-separated columns. \texttt{awk -F'\textbackslash t' '\{print \$1, \$2, \$5\}' file.vcf} prints columns 1, 2, and 5 of a tab-delimited file --- for a VCF those are chromosome, position, and quality.
-  \item Download a small yeast VCF to practice on. The URL is long, so break it across lines with backslash continuation (the first multi-line command in this curriculum):
+  \item Download a small yeast VCF to practice on. Same backslash-continuation pattern as the S288C download in Sprint 2:
     \begin{lstlisting}
 curl -O \
-  https://ftp.ensembl.org/pub/current_variation/\
+https://ftp.ensembl.org/pub/current_variation/\
 vcf/saccharomyces_cerevisiae/\
 saccharomyces_cerevisiae.vcf.gz
 gunzip saccharomyces_cerevisiae.vcf.gz
     \end{lstlisting}
-    Note how the second, third, and fourth lines continue the URL with no leading whitespace --- any space would be pasted \textit{into} the URL and the fetch would fail. If the link has moved, browse \url{https://ftp.ensembl.org/pub/current_variation/vcf/} and pick any small organism's VCF.
+    If the link has moved, browse \url{https://ftp.ensembl.org/pub/current_variation/vcf/} and pick any small organism's VCF.
   \item Look at the file structure: \texttt{head -n 30 saccharomyces\_cerevisiae.vcf}. Lines starting with \texttt{\#\#} are metadata; the single line starting with \texttt{\#CHROM} is the column header; all other lines are data records.
-  \item Count variants per chromosome (here the line endings are pipes, so no backslashes are needed --- the shell knows the pipeline is incomplete):
+  \item Count variants per chromosome. Here the line endings are pipes, so the shell knows the pipeline is incomplete and no backslashes are needed:
     \begin{lstlisting}
 grep -v '^#' saccharomyces_cerevisiae.vcf |
   awk '{print $1}' |
