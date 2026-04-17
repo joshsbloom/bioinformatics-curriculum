@@ -47,32 +47,38 @@ You chained four commands with pipes and counted nucleotide frequencies. You als
 \end{winbox}
 
 \sprint{3}{Grep and Awk: Extracting Lines and Columns}{25}
+
+\begin{warnbox}[Read this before typing any multi-line command in this sprint]
+You will see shell commands below that span several lines. A backslash (\textbackslash) at the end of a line tells the shell ``continue this command on the next line.'' Three rules that catch everyone at least once:
+\begin{itemize}[nosep]
+  \item The backslash must be the \textit{very last character} on the line. A single trailing space after it and the shell treats \texttt{\textbackslash~} as the escape sequence for a space, not a line continuation.
+  \item Do not put anything (not even a \texttt{\#} comment) on the same line after the backslash.
+  \item Inside a URL or any other token, the backslash-newline pair is consumed with no replacement character. \texttt{https://host/\textbackslash\textbackslash \\ path} reassembles to \texttt{https://host/path} --- no space inserted.
+\end{itemize}
+A safer alternative when you have a choice: end the line on a pipe (\texttt{|}) or a logical operator (\texttt{\&\&}, \texttt{||}) instead. The shell knows a pipeline is incomplete, so it reads the next line automatically and no backslash is needed. If a copy-paste from a PDF misbehaves, suspect a smart-quote, a stripped backslash, or a soft line break --- retype the continuation by hand.
+\end{warnbox}
+
 \begin{itemize}[nosep]
   \item \texttt{grep} searches for patterns. \texttt{grep -c '>' file.fasta} counts sequences; \texttt{grep -v} inverts the match (keeps lines that do \textit{not} match).
   \item \texttt{awk} extracts and transforms whitespace- or tab-separated columns. \texttt{awk -F'\textbackslash t' '\{print \$1, \$2, \$5\}' file.vcf} prints columns 1, 2, and 5 of a tab-delimited file --- for a VCF those are chromosome, position, and quality.
-  \item Download a small yeast VCF to practice on:
+  \item Download a small yeast VCF to practice on. The URL is long, so break it across lines with backslash continuation (the first multi-line command in this curriculum):
     \begin{lstlisting}
-curl -O https://ftp.ensembl.org/pub/current_variation/vcf/saccharomyces_cerevisiae/saccharomyces_cerevisiae.vcf.gz
+curl -O \
+  https://ftp.ensembl.org/pub/current_variation/\
+vcf/saccharomyces_cerevisiae/\
+saccharomyces_cerevisiae.vcf.gz
 gunzip saccharomyces_cerevisiae.vcf.gz
     \end{lstlisting}
-    If the link has moved, browse \url{https://ftp.ensembl.org/pub/current_variation/vcf/} and pick any small organism's VCF.
+    Note how the second, third, and fourth lines continue the URL with no leading whitespace --- any space would be pasted \textit{into} the URL and the fetch would fail. If the link has moved, browse \url{https://ftp.ensembl.org/pub/current_variation/vcf/} and pick any small organism's VCF.
   \item Look at the file structure: \texttt{head -n 30 saccharomyces\_cerevisiae.vcf}. Lines starting with \texttt{\#\#} are metadata; the single line starting with \texttt{\#CHROM} is the column header; all other lines are data records.
-  \item Count variants per chromosome:
+  \item Count variants per chromosome (here the line endings are pipes, so no backslashes are needed --- the shell knows the pipeline is incomplete):
     \begin{lstlisting}
-grep -v '^#' saccharomyces_cerevisiae.vcf | \
-  awk '{print $1}' | \
+grep -v '^#' saccharomyces_cerevisiae.vcf |
+  awk '{print $1}' |
   sort | uniq -c | sort -rn
     \end{lstlisting}
     \texttt{grep -v '\textasciicircum\#'} drops every header line; \texttt{awk} pulls out the chromosome column; \texttt{sort | uniq -c} tallies each chromosome; the final \texttt{sort -rn} orders by count.
 \end{itemize}
-\begin{warnbox}[Splitting a long command over multiple lines]
-A backslash (\textbackslash) at the end of a line tells the shell ``continue this command on the next line.'' Two rules that catch everyone at least once:
-\begin{itemize}[nosep]
-  \item The backslash must be the \textit{very last character} on the line. A single trailing space after it and the shell treats \texttt{\textbackslash~} as the escape sequence for a space, not a line continuation.
-  \item Do not put anything (not even a \texttt{\#} comment) on the same line after the backslash.
-\end{itemize}
-A safer alternative: end the line on a pipe (\texttt{|}) or logical operator (\texttt{\&\&}, \texttt{||}) instead. The shell knows a pipeline is incomplete, so it reads the next line automatically; no backslash needed. If a paste from a PDF misbehaves, suspect a smart-quote or a stripped backslash and retype the break by hand.
-\end{warnbox}
 \begin{winbox}[Checkpoint]
 Running the pipeline above produces a table with roughly 16 rows (one per yeast chromosome) with a count in front of each. Paste this table into \texttt{journal.md}.
 \end{winbox}
