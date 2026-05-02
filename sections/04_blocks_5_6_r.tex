@@ -10,6 +10,10 @@ R has Bioconductor, a collection of thousands of biology-specific packages with 
 R is not installed by default on macOS or most Linux distributions. Download the pre-built binary for your OS/architecture from CRAN (\url{https://cran.r-project.org}), then install RStudio Desktop for a comfortable IDE (\url{https://posit.co/download/rstudio-desktop/}). See \hyperref[app:tools]{Appendix~A} for more.
 \end{tipbox}
 
+\begin{tipbox}[Data files for this chapter]
+Sprints 2--5 read four small data files from the \texttt{data/} subdirectory of this curriculum's repo: \texttt{counts.tsv}, \texttt{sample\_info.tsv}, \texttt{de\_results.csv}, and \texttt{peaks.bed}. Either clone the repo and \texttt{setwd()} into it, or copy the files into the working directory of your R session. \texttt{file.exists("data/counts.tsv")} should return \texttt{TRUE} before you start Sprint 2.
+\end{tipbox}
+
 
 \section{Block 5: R Basics + Bioconductor}
 
@@ -50,27 +54,46 @@ You loaded a TSV, inspected its structure with \texttt{str()}, pulled one column
 
 \sprint{2}{Lists, the Apply Family, and Functional R}{25}
 R grew up as a functional language: instead of writing for-loops, you hand a function to another function that runs it over a collection. This pattern is everywhere in R code, so you need to read it fluently even if you prefer to write loops yourself.
+
+\textbf{Load the count table for this sprint first.} \texttt{counts.tsv} has 50 genes and four count columns (\texttt{sample1}--\texttt{sample4}):
+\begin{lstlisting}
+counts_df <- read.table("data/counts.tsv",
+                        header = TRUE, sep = "\t")
+head(counts_df)
+counts_mat <- as.matrix(
+  counts_df[, c("sample1", "sample2",
+                "sample3", "sample4")])
+rownames(counts_mat) <- counts_df$gene_id
+\end{lstlisting}
+Now you have \texttt{counts\_mat}: 50 rows (genes) by 4 columns (samples), with gene names as row names.
+
 \begin{itemize}[nosep]
-  \item \textbf{\texttt{lapply()} --- run f over a list, return a list.}
+  \item \textbf{\texttt{apply()} --- walk rows or columns of a matrix.} First arg = matrix; \texttt{1} = rows, \texttt{2} = columns; third arg = the function.
     \begin{lstlisting}
-genes <- list(BRCA1 = counts1, BRCA2 = counts2)
-means <- lapply(genes, mean)
-# means$BRCA1, means$BRCA2
+row_means <- apply(counts_mat, 1, mean)
+col_sds   <- apply(counts_mat, 2, sd)
+head(sort(row_means, decreasing = TRUE))
+col_sds
     \end{lstlisting}
-  \item \textbf{\texttt{sapply()}} does the same and simplifies to a vector/matrix when it can. Convenient interactively; prefer \texttt{vapply()} in scripts --- it type-checks the return shape and fails loudly when a single element deviates.
-  \item \textbf{\texttt{apply()} --- walk rows or columns of a matrix.}
+    \texttt{row\_means} is a per-gene mean count; \texttt{col\_sds} is a per-sample standard deviation.
+  \item \textbf{\texttt{lapply()} --- run f over a list, return a list.} Treat the columns of \texttt{counts\_mat} as a list of vectors:
     \begin{lstlisting}
-row_means <- apply(counts_matrix, 1, mean)
-col_sds   <- apply(counts_matrix, 2, sd)
+per_sample <- as.list(as.data.frame(counts_mat))
+means <- lapply(per_sample, mean)
+means$sample1
     \end{lstlisting}
-    First arg = matrix; \texttt{1} = rows, \texttt{2} = columns; third arg = the function.
+  \item \textbf{\texttt{sapply()}} does the same and simplifies to a vector/matrix when it can: \texttt{sapply(per\_sample, mean)} returns a named numeric vector. Convenient interactively; prefer \texttt{vapply()} in scripts --- it type-checks the return shape and fails loudly when a single element deviates.
+  \item \textbf{\texttt{tapply()} --- split by a grouping vector, then apply.} Use the \texttt{chromosome} column to compute mean expression per chromosome for sample1:
+    \begin{lstlisting}
+tapply(counts_df$sample1,
+       counts_df$chromosome, mean)
+    \end{lstlisting}
   \item \textbf{\texttt{mapply()} / \texttt{Map()} --- over multiple parallel inputs.} \texttt{mapply(t.test, group\_a\_list, group\_b\_list)} runs a t-test pairing element 1 of each, element 2 of each, etc.
-  \item \textbf{\texttt{tapply()} --- split by a grouping vector, then apply.} \texttt{tapply(expression, tissue, mean)} is ``mean expression per tissue'' in one call.
   \item \textbf{Why this matters.} DESeq2 results come back as a list; \texttt{apply()} is how you compute per-gene statistics; \texttt{lapply()} appears in every production R pipeline. Loops are not wrong, but apply-family code is shorter and more idiomatic.
   \item \textbf{The modern equivalent.} The \texttt{purrr} package (part of the tidyverse) gives you \texttt{map()}, \texttt{map\_dbl()}, \texttt{map\_chr()}, \texttt{map2()}, \texttt{pmap()} --- same idea, stricter return types. We'll use \texttt{purrr::map\_dbl()} in the next sprint.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You computed per-gene means and per-sample standard deviations on a count matrix without writing a single explicit loop. This is the R way.
+You loaded \texttt{counts.tsv}, computed per-gene means and per-sample standard deviations, and got mean expression per chromosome with one \texttt{tapply} call --- without writing a single explicit loop. This is the R way.
 \end{winbox}
 
 \sprint{3}{Tidyverse: A Modern Layer on Top of R}{25}
@@ -80,11 +103,17 @@ Install once with \texttt{install.packages("tidyverse")} in an R session --- tha
 
 \begin{itemize}[nosep]
   \item \textbf{The pipe.} \texttt{\%>\%} (from \texttt{magrittr}, re-exported by dplyr) and the newer base-R \texttt{|>} (R $\geq$ 4.1) both do the same thing: pass the left-hand side as the first argument of the right-hand side. They're Unix \texttt{|} for data frames.
+  \item \textbf{Load the example DE table.} \texttt{de\_results.csv} has columns \texttt{gene}, \texttt{chromosome}, \texttt{sample}, \texttt{log2FC}, \texttt{p.value}, and \texttt{pAdj}. The dot in \texttt{p.value} is just part of the column name --- back-tick it when dplyr needs to quote it.
+    \begin{lstlisting}
+library(readr)
+library(dplyr)
+de_results <- read_csv("data/de_results.csv")
+glimpse(de_results)
+    \end{lstlisting}
   \item \textbf{The five verbs you'll use constantly.}
     \begin{lstlisting}
-library(dplyr)
 de_results |>
-  filter(padj < 0.05) |>
+  filter(pAdj < 0.05) |>
   mutate(direction = if_else(log2FC > 0,
                              "up", "down")) |>
   group_by(chromosome, direction) |>
@@ -106,24 +135,79 @@ You chained five dplyr verbs to go from raw DE results to a ranked table of up/d
 
 \sprint{4}{Bioconductor: GRanges for Genomic Intervals}{25}
 \begin{itemize}[nosep]
-  \item Install: \texttt{BiocManager::install('GenomicRanges')}.
-  \item Create: \texttt{gr <- GRanges(seqnames = 'chr1', ranges = IRanges(start = 100, end = 200))}.
-  \item \texttt{findOverlaps(peaks, genes)} tells you which peaks overlap which genes. It is the in-R counterpart of \texttt{bedtools intersect}.
-  \item \texttt{rtracklayer::import('file.bed')} loads BED, GFF, or BigWig directly.
+  \item Install (one-time):
+    \begin{lstlisting}
+install.packages("BiocManager")
+BiocManager::install(c("GenomicRanges",
+                       "rtracklayer"))
+    \end{lstlisting}
+  \item \textbf{Create a GRanges by hand.}
+    \begin{lstlisting}
+library(GenomicRanges)
+gr <- GRanges(seqnames = "chrI",
+              ranges = IRanges(start = 100,
+                               end   = 200))
+gr
+    \end{lstlisting}
+  \item \textbf{Load real intervals from a BED file.} \texttt{peaks.bed} is the BED5 file (chrom/start/end/name/score) of 30 ChIP-style peaks on yeast chromosomes:
+    \begin{lstlisting}
+library(rtracklayer)
+peaks <- import("data/peaks.bed")
+peaks       # a GRanges with 30 ranges
+seqnames(peaks)
+width(peaks)
+    \end{lstlisting}
+    \texttt{rtracklayer::import()} reads BED, GFF, GTF, and BigWig with the same call.
+  \item \textbf{Overlap two GRanges.} Make a few fake gene intervals and find which peaks fall in genes:
+    \begin{lstlisting}
+genes <- GRanges(
+  seqnames = c("chrI", "chrII", "chrIV"),
+  ranges   = IRanges(start = c(1, 100000, 800000),
+                     end   = c(60000, 200000, 900000)))
+hits <- findOverlaps(peaks, genes)
+hits
+    \end{lstlisting}
+    \texttt{findOverlaps()} is the in-R counterpart of \texttt{bedtools intersect}.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You performed a genomic interval overlap in R. Same concept as bedtools, different syntax.
+You imported a real BED file as a \texttt{GRanges} object and ran an overlap against a hand-built set of gene intervals. Same concept as bedtools, different syntax.
 \end{winbox}
 
 \sprint{5}{SummarizedExperiment: The Standard Bioconductor Container}{25}
 \begin{itemize}[nosep]
-  \item A \texttt{SummarizedExperiment} bundles a counts matrix with gene-level metadata (\texttt{rowData}) and sample-level metadata (\texttt{colData}) in one object.
-  \item Most Bioconductor analysis tools expect data in this format. Learn it once; you will reuse it everywhere.
-  \item Load a real dataset with \texttt{recount3} (pre-aligned RNA-seq from thousands of public studies) or \texttt{GEOquery} (any GEO series).
-  \item Explore: \texttt{assay(se)[1:5, 1:5]} gives the first 5 genes across the first 5 samples.
+  \item \textbf{Build one from the files you already have.} A \texttt{SummarizedExperiment} bundles three things into a single object: a counts matrix, gene-level metadata (\texttt{rowData}), and sample-level metadata (\texttt{colData}). Construct it from \texttt{counts.tsv} and \texttt{sample\_info.tsv}:
+    \begin{lstlisting}
+library(SummarizedExperiment)
+
+counts_df <- read.table("data/counts.tsv",
+                        header = TRUE, sep = "\t")
+sample_df <- read.table("data/sample_info.tsv",
+                        header = TRUE, sep = "\t")
+
+count_mat <- as.matrix(
+  counts_df[, c("sample1", "sample2",
+                "sample3", "sample4")])
+rownames(count_mat) <- counts_df$gene_id
+
+se <- SummarizedExperiment(
+  assays  = list(counts = count_mat),
+  rowData = DataFrame(chromosome = counts_df$chromosome),
+  colData = DataFrame(sample_df,
+                      row.names = sample_df$sample))
+se
+    \end{lstlisting}
+  \item \textbf{Explore the object you just built.}
+    \begin{lstlisting}
+dim(se)              # genes x samples
+assay(se)[1:5, 1:4]  # top-left of count matrix
+rowData(se)          # per-gene metadata
+colData(se)          # per-sample metadata
+    \end{lstlisting}
+  \item \textbf{Why this matters.} Most Bioconductor analysis tools (DESeq2, edgeR, limma) accept a \texttt{SummarizedExperiment} directly. Bundling assay + rowData + colData in one object means you can subset by sample (\texttt{se[, se\$condition == "treated"]}) without ever desynchronizing the count matrix from its metadata --- a classic source of bugs when you keep them in parallel objects.
+  \item \textbf{Optional: pull a public dataset.} For a larger real-world example, try \texttt{recount3} (pre-aligned RNA-seq from thousands of public studies) or \texttt{GEOquery} (any GEO series); both return \texttt{SummarizedExperiment} objects with the same accessor functions.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You loaded a public RNA-seq dataset into R as a \texttt{SummarizedExperiment}. \texttt{dim(se)}, \texttt{colData(se)}, and \texttt{rowData(se)} all return something sensible.
+You built a \texttt{SummarizedExperiment} from \texttt{counts.tsv} + \texttt{sample\_info.tsv}, and \texttt{dim(se)}, \texttt{colData(se)}, and \texttt{rowData(se)} all return something sensible. This is the object DESeq2 expects in the next sprint.
 \end{winbox}
 
 
@@ -134,11 +218,10 @@ You loaded a public RNA-seq dataset into R as a \texttt{SummarizedExperiment}. \
   \item Build a \texttt{DESeqDataSet} from your \texttt{SummarizedExperiment} plus a design formula (e.g., \texttt{\textasciitilde condition}).
   \item Run \texttt{dds <- DESeq(dds); res <- results(dds)}. Two function calls do the whole analysis.
   \item Understand what happened under the hood: normalization (size factors), dispersion estimation with empirical Bayes shrinkage, a negative-binomial GLM fit per gene, and a Wald test for each contrast.
-  \item Extract results: \texttt{res[order(res\$padj), ]} gives genes sorted by adjusted p-value.
-  \item Make a volcano plot of $-\log_{10}(p)$ vs.\ $\log_2(\text{fold change})$ with ggplot2.
+  \item Extract results: \texttt{res[order(res\$padj), ]} gives genes sorted by adjusted p-value. Save the table to disk --- you'll plot it with ggplot2 in Sprint 7.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You ran a differential expression analysis end-to-end. Sanity checks: a well-behaved dataset shows a symmetric volcano and a mostly-uniform p-value histogram away from zero.
+You ran a differential expression analysis end-to-end. Sanity checks: a mostly-uniform p-value histogram away from zero, and a few genes with very low \texttt{padj}.
 \end{winbox}
 
 \sprint{7}{ggplot2: Grammar of Graphics}{25}
@@ -147,9 +230,27 @@ You ran a differential expression analysis end-to-end. Sanity checks: a well-beh
   \item Layer more geoms: \texttt{+ geom\_violin() + geom\_boxplot(width = 0.1)}.
   \item Facets: \texttt{+ facet\_wrap(\textasciitilde chromosome)} splits into small multiples by a variable.
   \item Save with \texttt{ggsave('figure1.pdf', width = 8, height = 6)}.
+  \item \textbf{Volcano plot.} Use the DE results from Sprint 6 (or \texttt{de\_results.csv} from Sprint 3) to make a volcano plot of $-\log_{10}(p)$ vs.\ $\log_2(\text{fold change})$:
+    \begin{lstlisting}
+library(ggplot2)
+library(readr)
+de <- read_csv("data/de_results.csv")
+ggplot(de, aes(x = log2FC,
+               y = -log10(p.value))) +
+  geom_point(aes(color = pAdj < 0.05),
+             alpha = 0.7) +
+  scale_color_manual(values = c("grey60",
+                                "firebrick")) +
+  labs(x = "log2 fold change",
+       y = "-log10(p-value)",
+       color = "FDR < 0.05") +
+  theme_minimal()
+ggsave("volcano.pdf", width = 6, height = 5)
+    \end{lstlisting}
+    A well-behaved dataset shows a roughly symmetric volcano with the most extreme points highlighted.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You produced a multi-panel figure with labeled axes, a title, and a saved PDF in your repo.
+You produced a multi-panel figure with labeled axes, a title, and a saved PDF in your repo, plus a volcano plot from your DE results.
 \end{winbox}
 
 \sprint{8}{Compare DE Methods}{25}

@@ -167,40 +167,33 @@ Rule of thumb: use conda for interactive development (fast to edit, easy to iter
 \end{brainbox}
 
 \begin{itemize}[nosep]
-  \item \textbf{Two runtimes you will encounter.} Docker is the developer-facing tool; it requires a privileged daemon, which is why most shared HPCs will not run it. Install Docker Desktop on macOS (\url{https://docs.docker.com/desktop/install/mac-install/}) or Docker Engine on Linux (\url{https://docs.docker.com/engine/install/}). Apptainer (formerly Singularity) is the HPC-safe equivalent: no daemon, no root, and a container is a single \texttt{.sif} file you can \texttt{scp} around. HPCs usually provide a module (\texttt{module avail apptainer}); for a personal Linux install, see \url{https://apptainer.org/docs/user/main/quick_start.html}.
-  \item \textbf{Pull a biocontainer.} The Biocontainers project auto-builds one container per bioconda package. Try samtools:
+  \item \textbf{Install Docker.} Docker is the developer-facing runtime. Install Docker Desktop on macOS (\url{https://docs.docker.com/desktop/install/mac-install/}) or Docker Engine on Linux (\url{https://docs.docker.com/engine/install/}). Verify with \texttt{docker --version}.
+  \item \textbf{Pull a biocontainer.} The Biocontainers project auto-builds one container per bioconda package. Pull bcftools, which we'll use on the VCF you already have from Sprint 3:
     \begin{lstlisting}
 docker pull \
-  quay.io/biocontainers/samtools:1.19--h50ea8bc_0
+  quay.io/biocontainers/bcftools:1.19--h8b25389_0
     \end{lstlisting}
-  \item \textbf{Run without installing.} Execute the container's \texttt{samtools} with no other setup:
+  \item \textbf{Run without installing.} Execute the container's \texttt{bcftools} with no other setup:
     \begin{lstlisting}
 docker run --rm \
-  quay.io/biocontainers/samtools:1.19--h50ea8bc_0 \
-  samtools --version
+  quay.io/biocontainers/bcftools:1.19--h8b25389_0 \
+  bcftools --version
     \end{lstlisting}
     \texttt{--rm} discards the stopped container after it exits; the image stays cached for next time.
-  \item \textbf{Mount your data.} Containers see an isolated filesystem by default. Map your current directory in so the tool can read local files:
+  \item \textbf{Mount your data.} Containers see an isolated filesystem by default. Map a host directory in so the tool can read local files. \texttt{cd} into the directory holding your VCF first, then:
     \begin{lstlisting}
+cd ~/bioinfo/block1/data
 docker run --rm -v "$PWD":/work -w /work \
-  quay.io/biocontainers/samtools:1.19--h50ea8bc_0 \
-  samtools view file.bam | head
+  quay.io/biocontainers/bcftools:1.19--h8b25389_0 \
+  bcftools view -h saccharomyces_cerevisiae.vcf | head -20
     \end{lstlisting}
-    \texttt{-v HOST:CONTAINER} mounts a host directory; \texttt{-w} sets the working directory inside.
-  \item \textbf{On an HPC, use Apptainer.} Same image, no daemon required:
-    \begin{lstlisting}
-apptainer pull \
-  docker://quay.io/biocontainers/samtools:1.19--h50ea8bc_0
-apptainer exec samtools_1.19--h50ea8bc_0.sif \
-  samtools --version
-    \end{lstlisting}
-    Apptainer auto-mounts your home directory and the current working directory, so most pipelines just work.
+    \texttt{-v HOST:CONTAINER} mounts a host directory; \texttt{-w} sets the working directory inside. The container has no \texttt{bcftools} on the host, but it ran one anyway --- and produced output from your real VCF.
 \end{itemize}
 \begin{tipbox}[Conda vs.\ container --- when to reach for which]
 Conda gives you speed and easy iteration at the cost of strict reproducibility: two users with the same \texttt{environment.yml} may still resolve to different package builds on different platforms. A container gives you a fixed binary that will run identically for years, at the cost of being heavier to build and harder to edit. Many published pipelines use both: conda during development, a container (often built from the conda env) for the frozen release.
 \end{tipbox}
 \begin{winbox}[Checkpoint]
-You pulled a container, ran a bioinformatics tool from it without installing anything locally, and mounted a host directory into it. You can also name which runtime you would reach for on a laptop versus an HPC, and why.
+You pulled a container, ran a bioinformatics tool from it without installing anything locally, and mounted a host directory into it so it could read your real VCF.
 \end{winbox}
 
 \sprint{8}{Git and GitHub: Version Control and Your Portfolio}{25}
@@ -241,14 +234,27 @@ git push -u origin main
 Your bioinfo-journey repo has real commits, ignores big files, pushes over SSH without password prompts, and you have proved you can clone and pull from it. This is the start of your portfolio.
 \end{winbox}
 
-\sprint{9}{Integration Sprint: Full Pipeline}{50}
-\begin{itemize}[nosep]
-  \item Combine everything: write a bash script that activates a conda environment, downloads a small FASTQ from SRA (use \texttt{fasterq-dump} from the SRA Toolkit; \texttt{mamba install -c bioconda sra-tools}), runs \texttt{fastp} for QC, and appends a one-line summary to a log file.
-  \item Start an HPC-style persistent session with \texttt{tmux} (\hyperref[app:tools]{Appendix~A}) or \texttt{screen} so you can disconnect and reconnect. Essential on a remote cluster where a dropped SSH connection would otherwise kill your job.
-  \item Commit the script and the QC results (not the raw FASTQ) to Git.
-\end{itemize}
+\sprint{9}{Integration Sprint: Reproducible Variant Summary}{50}
+The goal: take the work from Sprints 3--5 and turn it into a single reproducible script that runs inside the conda environment from Sprint 6, writes a timestamped report, and is tracked in the Git repo from Sprint 8. No new tools --- just the ones you've already installed.
+\begin{enumerate}[nosep]
+  \item \textbf{Write \texttt{scripts/variant\_report.sh}} that takes a VCF path as \texttt{\$1} and:
+    \begin{itemize}[nosep]
+      \item starts with \texttt{\#!/usr/bin/env bash} and \texttt{set -euo pipefail} (Sprint 5);
+      \item runs the per-chromosome variant tally from Sprint 3 (\texttt{grep -v '\textasciicircum\#' | awk \ldots | sort | uniq -c | sort -rn});
+      \item also runs \texttt{bcftools stats "\$1" | head -30} from the \texttt{biotools} env (Sprint 6);
+      \item writes both outputs, prefixed by \texttt{date} and the input filename, into \texttt{results/report\_\$(date +\%Y\%m\%d).txt}.
+    \end{itemize}
+  \item \textbf{Use the conda env.} Either \texttt{mamba activate biotools} before running the script, or have the script source conda and activate the env itself (\texttt{source "\$(conda info --base)/etc/profile.d/conda.sh"; conda activate biotools}).
+  \item \textbf{Run it} on the yeast VCF from Sprint 3 and confirm the report file appears under \texttt{results/}.
+  \item \textbf{Commit the script and the report.} Per the \texttt{.gitignore} rules from Sprint 8, do not commit the raw VCF --- but the script and the small text report are fair game.
+\end{enumerate}
 \begin{winbox}[Checkpoint]
-A reproducible, version-controlled QC pipeline: a single script you or someone else can re-run on a new sample with one command.
+A single command,
+\begin{lstlisting}
+./scripts/variant_report.sh \
+  ~/bioinfo/block1/data/saccharomyces_cerevisiae.vcf
+\end{lstlisting}
+produces a dated report under \texttt{results/} that you can hand to someone else along with your repo and your \texttt{environment.yml}, and they can reproduce it.
 \end{winbox}
 
 \begin{restbox}[End of Blocks 1--2]

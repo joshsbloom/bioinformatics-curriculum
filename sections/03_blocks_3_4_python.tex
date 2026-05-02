@@ -19,33 +19,144 @@ Indentation is syntax in Python: four spaces per level, consistent throughout a 
 \section{Block 3: Core Python via Biology}
 
 \sprint{1}{Data Structures for Biology}{25}
-Pythonic code is less about clever tricks and more about reaching for the right built-in collection. Each has a natural biological use case.
+Pythonic code is less about clever tricks and more about reaching for the right built-in collection. Each has a natural biological use case. \textbf{Open \texttt{python3} (or a Jupyter cell) and run each block before moving on} --- read-only is not enough here.
 \begin{itemize}[nosep]
-  \item \textbf{Strings = DNA sequences.}
+  \item \textbf{Strings = DNA sequences.} Reverse-complement \texttt{ATGCGATCG} and verify by hand:
     \begin{lstlisting}
 seq = 'ATGCGATCG'
 comp = seq.translate(str.maketrans('ATCG','TAGC'))
 print(comp[::-1])  # reverse complement
     \end{lstlisting}
-  \item \textbf{Lists = ordered, mutable collections.} Comprehensions are how you filter them: \texttt{[g for g in genes if g.startswith('BRCA')]}. Swap the brackets for parentheses to get a \textit{generator expression} that yields items one at a time without building the full list in memory.
-  \item \textbf{Tuples = immutable records.} Genomic coordinates are a natural fit: \texttt{peak = ("chr1", 1000, 2000)}. Because tuples are immutable, they're hashable --- so they can serve as dict keys or live in sets (``which regions have I already processed?'').
-  \item \textbf{Dictionaries = lookup tables.} Build a codon table: \texttt{codons = \{'ATG':\,'M', 'TAA':\,'*', 'GCT':\,'A', \ldots\}} and translate three bases at a time.
-  \item \textbf{Sets = membership and overlap.} \texttt{set(sampleA) \& set(sampleB)} (intersection), \texttt{|} (union), \texttt{-} (difference). Use them when order doesn't matter and you care about presence/absence.
-  \item \textbf{\texttt{collections.Counter} and \texttt{defaultdict}.} \texttt{Counter(seq).most\_common(4)} counts every character and returns the top four --- no ``does this key exist yet?'' dance. \texttt{defaultdict(list)} lets you write \texttt{d[chrom].append(pos)} without initializing each chromosome's list by hand.
+    \textbf{Do:} now reverse-complement \texttt{AAACGTTTGCAGGGAATTC} and find the position of the EcoRI site (\texttt{GAATTC}) in both the original and the reverse complement using \texttt{str.find()}.
+  \item \textbf{Lists = ordered, mutable collections.} Build a list of gene names and filter it:
+    \begin{lstlisting}
+genes = ['BRCA1', 'BRCA2', 'TP53',
+         'BRAF', 'MYC', 'BRD4']
+brc = [g for g in genes if g.startswith('BR')]
+print(brc)  # 4 hits
+    \end{lstlisting}
+    \textbf{Do:} change the comprehension to keep only genes whose name is exactly four characters long. Swap the outer brackets for parentheses --- you now have a \textit{generator expression}; pass it to \texttt{list()} to get the same result.
+  \item \textbf{Tuples = immutable records.} Genomic coordinates are a natural fit:
+    \begin{lstlisting}
+peak = ('chr1', 1000, 2000)
+chrom, start, end = peak  # unpack
+print(end - start)        # 1000
+    \end{lstlisting}
+    \textbf{Do:} put three peak tuples into a \texttt{set()}; add a duplicate of the first; print \texttt{len()}. Because tuples are hashable, the duplicate is dropped --- this is how you build ``regions I've already processed.''
+  \item \textbf{Dictionaries = lookup tables.} Build a tiny codon table and translate three bases at a time:
+    \begin{lstlisting}
+codons = {'ATG': 'M', 'GCT': 'A',
+          'AAA': 'K', 'TAA': '*'}
+mrna = 'ATGGCTAAATAA'
+prot = ''.join(codons[mrna[i:i+3]]
+               for i in range(0, len(mrna), 3))
+print(prot)  # MAK*
+    \end{lstlisting}
+    \textbf{Do:} change one codon in \texttt{mrna} so the protein reads \texttt{MA*}.
+  \item \textbf{Sets = membership and overlap.} Compare two ``hit lists'':
+    \begin{lstlisting}
+sampleA = {'BRCA1', 'TP53', 'MYC'}
+sampleB = {'TP53', 'MYC', 'EGFR'}
+print(sampleA & sampleB)  # in both
+print(sampleA - sampleB)  # only A
+    \end{lstlisting}
+    \textbf{Do:} compute the union with \texttt{|} and confirm its size equals \texttt{len(A) + len(B) - len(A \& B)}.
+  \item \textbf{\texttt{collections.Counter} and \texttt{defaultdict}.} The right tool for ``count things'' and ``group things'':
+    \begin{lstlisting}
+from collections import Counter, defaultdict
+seq = 'ATGCATGCATGCAA'
+print(Counter(seq).most_common())
+
+variants = [('chr1', 100), ('chr2', 50),
+            ('chr1', 250), ('chr2', 80)]
+by_chrom = defaultdict(list)
+for chrom, pos in variants:
+    by_chrom[chrom].append(pos)
+print(dict(by_chrom))
+    \end{lstlisting}
+    \textbf{Do:} use \texttt{Counter} on a longer DNA string and call \texttt{.most\_common(2)} to get the top two bases.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-You reverse-complemented DNA with \texttt{str.translate}, counted nucleotide frequencies with \texttt{Counter}, and grouped positions by chromosome with \texttt{defaultdict}. Idiomatic Python is largely about picking the right container rather than writing loops by hand.
+You reverse-complemented DNA, filtered a list, deduplicated peaks via a set, translated mRNA with a dict, intersected two sample hit lists, and grouped variants by chromosome with \texttt{defaultdict}. Idiomatic Python is largely about picking the right container rather than writing loops by hand.
 \end{winbox}
 
 \sprint{2}{Parsing Genomic Files}{25}
+\begin{brainbox}[What is a parser?]
+A \textbf{parser} is just a function that turns a text file into structured data your program can use --- a list of records, a dictionary, a dataclass. Every bioinformatics format (FASTA, FASTQ, VCF, BED, GFF) is plain text, but each has its own line-level rules: which lines are headers, which are data, what separates fields. Writing a parser is the act of teaching Python those rules. The recipe is always the same: open the file, walk through lines one at a time, recognize what each line means, and accumulate records. Today we'll build that recipe up step by step.
+\end{brainbox}
+
 \begin{itemize}[nosep]
-  \item Write a FASTA parser: open the file, walk through lines, and return a list of \texttt{(header, sequence)} pairs. Remember that a sequence can span many lines between two \texttt{>} headers.
-  \item Use a context manager (\texttt{with open(path) as f:}). This closes the file automatically even if an exception is raised.
-  \item Parse a BED file into a list of dictionaries: \texttt{[\{"chrom": ..., "start": int(...), "end": int(...)\}, ...]}. BED is tab-separated and 0-based, half-open.
-  \item Handle malformed input. Wrap the parsing in \texttt{try/except ValueError} so a bad row reports a useful message and continues instead of crashing.
+  \item \textbf{Step 1: read a file, line by line.} Make a tiny test file in your current directory called \texttt{toy.tsv}:
+    \begin{lstlisting}
+chr1    100    200
+chr1    500    600
+chr2    50     75
+    \end{lstlisting}
+    Then in Python:
+    \begin{lstlisting}
+with open('toy.tsv') as f:
+    for line in f:
+        print(repr(line))
+    \end{lstlisting}
+    The \texttt{with} block is a \textit{context manager} --- it closes the file automatically even if an exception is raised. \texttt{repr()} reveals the trailing \texttt{\textbackslash n} on each line.
+  \item \textbf{Step 2: split each line into fields.} Replace the \texttt{print} with:
+    \begin{lstlisting}
+chrom, start, end = line.strip().split('\t')
+print(chrom, int(start), int(end))
+    \end{lstlisting}
+    \texttt{strip()} drops the trailing newline; \texttt{split('\textbackslash t')} gives a list of three strings; \texttt{int()} converts the numeric fields. You just wrote a one-line BED parser.
+  \item \textbf{Step 3: return structured records.} Wrap it in a function that returns a list of dictionaries:
+    \begin{lstlisting}
+def parse_bed(path):
+    records = []
+    with open(path) as f:
+        for line in f:
+            chrom, start, end = (
+                line.strip().split('\t'))
+            records.append({
+                'chrom': chrom,
+                'start': int(start),
+                'end':   int(end),
+            })
+    return records
+
+print(parse_bed('toy.tsv'))
+    \end{lstlisting}
+    BED is tab-separated, 0-based, half-open --- those are format conventions, not Python rules.
+  \item \textbf{Step 4: now FASTA --- one wrinkle.} A FASTA \textit{record} is a header line starting with \texttt{>} followed by one or more sequence lines that you have to glue together. So unlike BED, you can't return a record from each line: you accumulate sequence lines until you see the next \texttt{>}. Write \texttt{toy.fa}:
+    \begin{lstlisting}
+>seq1 short
+ATGCATGC
+ATGC
+>seq2 even shorter
+GGGTTT
+    \end{lstlisting}
+    Then write \texttt{parse\_fasta(path)} that returns a list of \texttt{(header, sequence)} tuples. Sketch:
+    \begin{lstlisting}
+def parse_fasta(path):
+    records = []
+    header, chunks = None, []
+    with open(path) as f:
+        for line in f:
+            line = line.rstrip()
+            if line.startswith('>'):
+                if header is not None:
+                    records.append(
+                        (header, ''.join(chunks)))
+                header = line[1:]   # drop '>'
+                chunks = []
+            else:
+                chunks.append(line)
+        if header is not None:       # last record
+            records.append(
+                (header, ''.join(chunks)))
+    return records
+    \end{lstlisting}
+    Run \texttt{parse\_fasta('toy.fa')} and confirm \texttt{seq1}'s sequence is \texttt{ATGCATGCATGC} (the two lines joined).
+  \item \textbf{Step 5: handle malformed input.} Add a deliberately broken line to \texttt{toy.tsv} (e.g.\ remove a tab) and rerun \texttt{parse\_bed()}. You'll get a \texttt{ValueError}. Wrap the inner work in \texttt{try/except ValueError}: print a warning naming the line, then \texttt{continue}. A robust parser tolerates one bad row without crashing the whole run.
 \end{itemize}
 \begin{winbox}[Checkpoint]
-Your parser returns a list of records from a small FASTA you write by hand, and prints a warning when you deliberately introduce a malformed BED line.
+You wrote two parsers from scratch: a single-line BED parser and a multi-line FASTA parser. Both run on tiny test files you wrote by hand. Your BED parser also prints a warning and keeps going when you feed it a malformed line.
 \end{winbox}
 
 \sprint{3}{Generators: Streaming Files Larger Than RAM}{25}
